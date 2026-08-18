@@ -118,10 +118,15 @@ module WestanPoints
       end
 
       def vip_member?(user)
-        group_name = SiteSetting.westan_points_vip_group.to_s
-        return false if group_name.blank? || user.nil?
+        setting_value =
+          SiteSetting.westan_points_vip_group.to_s.strip.delete_prefix("@")
+        return false if setting_value.blank? || user.nil?
 
-        user.groups.any? { |group| group.name.casecmp?(group_name) }
+        group = Group.find_by(id: setting_value.to_i) if setting_value.match?(/\A\d+\z/)
+        group ||= Group.where("LOWER(name) = ?", setting_value.downcase).first
+        return false unless group
+
+        user.groups.any? { |user_group| user_group.id == group.id }
       end
 
       def expiration_date_for(earned_at)
@@ -202,6 +207,55 @@ module WestanPoints
         end
       end
 
+      def backfill_posts!(start_at:, end_at: Time.zone.now)
+        start_time = start_at.in_time_zone
+        end_time = end_at.in_time_zone
+        raise ArgumentError, "start_at must be before end_at" unless start_time < end_time
+
+        stats = {
+          candidates: 0,
+          processed: 0,
+          awarded: 0,
+          skipped: 0,
+          failed: 0,
+          points_awarded: 0
+        }
+        posts =
+          Post
+            .includes(:topic, user: :groups)
+            .where(created_at: start_time..end_time)
+
+        stats[:candidates] = posts.count
+        posts.find_each(batch_size: 500) do |post|
+          stats[:processed] += 1
+          event_key =
+            post.post_number.to_i == 1 ? "topic:#{post.topic_id}" : "post:#{post.id}"
+          already_awarded = Transaction.active.exists?(event_key: event_key)
+
+          begin
+            award_post(post)
+            transaction = Transaction.active.find_by(event_key: event_key)
+
+            if !already_awarded && transaction
+              stats[:awarded] += 1
+              stats[:points_awarded] += transaction.amount
+            else
+              stats[:skipped] += 1
+            end
+          rescue StandardError => error
+            stats[:failed] += 1
+            Rails.logger.error(
+              "[#{WestanPoints::PLUGIN_NAME}] Failed to backfill post #{post.id}: " \
+                "#{error.class}: #{error.message}"
+            )
+          end
+
+          yield(stats.dup) if block_given? && (stats[:processed] % 500).zero?
+        end
+
+        stats
+      end
+
       private
 
       def remaining_buckets(user_id:)
@@ -253,6 +307,7 @@ module WestanPoints
 
       def award_details(post)
         is_topic = post.post_number.to_i == 1
+        earned_at = (post.created_at || Time.zone.now).in_time_zone
         base_points =
           is_topic ? SiteSetting.westan_points_per_topic.to_i : SiteSetting.westan_points_per_post.to_i
         multiplier = vip_member?(post.user) ? SiteSetting.westan_points_vip_multiplier.to_i : 1
@@ -264,14 +319,16 @@ module WestanPoints
           source_type: is_topic ? "Topic" : "Post",
           source_id: is_topic ? post.topic_id : post.id,
           amount: amount,
-          expires_at: expiration_date_for(post.created_at || Time.zone.now),
+          earned_at: earned_at,
+          expires_at: expiration_date_for(earned_at),
           description: is_topic ? "Tópico criado" : "Post publicado",
           metadata: {
             base_points: base_points,
             multiplier: multiplier,
             topic_id: post.topic_id,
             post_id: post.id,
-            expires_at: expiration_date_for(post.created_at || Time.zone.now).iso8601
+            earned_at: earned_at.iso8601,
+            expires_at: expiration_date_for(earned_at).iso8601
           }
         }
       end
@@ -300,7 +357,9 @@ module WestanPoints
             source_id: details[:source_id],
             description: details[:description],
             metadata: details[:metadata],
-            expires_at: details[:expires_at]
+            expires_at: details[:expires_at],
+            created_at: details[:earned_at],
+            updated_at: details[:earned_at]
           )
         end
       rescue ActiveRecord::RecordNotUnique

@@ -114,8 +114,12 @@ module WestanPoints
       end
 
       def vip_group!
-        group_name = SiteSetting.westan_points_vip_group.to_s.strip
-        group = Group.where("LOWER(name) = ?", group_name.downcase).first if group_name.present?
+        setting_value =
+          SiteSetting.westan_points_vip_group.to_s.strip.delete_prefix("@")
+        group = Group.find_by(id: setting_value.to_i) if setting_value.match?(/\A\d+\z/)
+        if !group && setting_value.present?
+          group = Group.where("LOWER(name) = ?", setting_value.downcase).first
+        end
 
         unless group && !group.automatic?
           raise Discourse::InvalidAccess.new("O grupo VIP configurado não está disponível")
