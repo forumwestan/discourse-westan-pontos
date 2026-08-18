@@ -1,0 +1,30 @@
+plugins:
+  westan_points_enabled:
+    default: true
+    client: true
+
+  westan_points_per_post:
+    default: 1
+    min: 0
+    max: 100
+    client: true
+
+  westan_points_per_topic:
+    default: 2
+    min: 0
+    max: 100
+    client: true
+
+  westan_points_vip_multiplier:
+    default: 2
+    min: 1
+    max: 10
+    client: true
+
+  westan_points_vip_group:
+    default: "Vip westan"
+    type: group
+
+  westan_points_excluded_categories:
+    default: ""
+    type: category_list

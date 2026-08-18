@@ -1,0 +1,8 @@
+en:
+  js:
+    westan_points:
+      title: "Meus pontos"
+  admin_js:
+    site_settings:
+      categories:
+        discourse_westan_pontos: "Westan Points"

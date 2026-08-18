@@ -1,0 +1,635 @@
+.westan-points-shell {
+  --wp-accent: #a12fe2;
+  --wp-accent-2: #d82acb;
+  --wp-gold: #f2b900;
+  --wp-surface: var(--secondary, #fff);
+  --wp-soft: color-mix(in srgb, var(--primary, #17131d) 6%, var(--secondary, #fff));
+  --wp-border: color-mix(in srgb, var(--primary, #17131d) 13%, transparent);
+  --wp-text: var(--primary, #17131d);
+  --wp-muted: color-mix(in srgb, var(--primary, #17131d) 60%, transparent);
+  width: min(100% - 24px, 980px);
+  margin: 0 auto;
+  padding: 28px 0 64px;
+  color: var(--wp-text);
+}
+
+.westan-points-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 24px;
+  border: 1px solid var(--wp-border);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 88% 12%, rgba(216, 42, 203, 0.28), transparent 30%),
+    linear-gradient(145deg, #1a0c22, #0d0911 68%);
+  box-shadow: 0 18px 45px rgba(43, 12, 62, 0.18);
+  color: #fff;
+}
+
+.westan-points-hero__topline,
+.westan-points-section__heading,
+.westan-reward-card__footer,
+.westan-points-balance,
+.westan-points-list__row,
+.westan-redemption-row,
+.westan-points-admin__catalog article,
+.westan-points-admin__redemptions article {
+  display: flex;
+  align-items: center;
+}
+
+.westan-points-hero__topline {
+  justify-content: space-between;
+  gap: 18px;
+
+  p,
+  h1 {
+    margin: 0;
+  }
+
+  p {
+    color: #dba8fa;
+    font-size: 0.82rem;
+    font-weight: 850;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  h1 {
+    margin-top: 3px;
+    font-size: clamp(1.45rem, 4vw, 2.25rem);
+    line-height: 1.05;
+  }
+}
+
+.westan-points-hero__actions {
+  display: flex;
+  gap: 8px;
+
+  button {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+  }
+}
+
+.westan-points-balance {
+  width: fit-content;
+  min-width: 310px;
+  margin-top: 28px;
+  padding: 17px 20px;
+  gap: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+
+  div {
+    display: grid;
+    grid-template-columns: auto auto;
+    align-items: baseline;
+    column-gap: 7px;
+  }
+
+  small {
+    grid-column: 1 / -1;
+    color: rgba(255, 255, 255, 0.66);
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  strong {
+    font-size: 2.1rem;
+    line-height: 1;
+  }
+
+  span {
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 0.82rem;
+  }
+
+  em {
+    margin-left: auto;
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #f9d953, #d48900);
+    color: #211300;
+    font-size: 0.72rem;
+    font-style: normal;
+    font-weight: 950;
+  }
+}
+
+.westan-points-balance__icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--wp-accent-2), var(--wp-accent));
+  color: #fff !important;
+
+  .d-icon,
+  .westan-points-wallet-icon {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+.westan-points-rules {
+  display: flex;
+  margin-top: 17px;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  span {
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 0.74rem;
+    font-weight: 700;
+  }
+
+  b {
+    color: #fff;
+  }
+}
+
+.westan-points-expiration {
+  display: flex;
+  width: fit-content;
+  margin-top: 12px;
+  padding: 8px 11px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(249, 217, 83, 0.22);
+  border-radius: 12px;
+  background: rgba(249, 217, 83, 0.09);
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 0.76rem;
+
+  .d-icon {
+    width: 13px;
+    height: 13px;
+    color: #f9d953;
+  }
+
+  b {
+    color: #fff;
+  }
+}
+
+.westan-points-info {
+  position: relative;
+  margin-top: 14px;
+  padding: 18px 50px 18px 18px;
+  border: 1px solid color-mix(in srgb, var(--wp-accent) 34%, transparent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--wp-accent) 8%, var(--wp-surface));
+
+  h2,
+  p {
+    margin: 0;
+  }
+
+  h2 {
+    font-size: 1rem;
+  }
+
+  p {
+    margin-top: 7px;
+    color: var(--wp-muted);
+    font-size: 0.86rem;
+  }
+
+  button {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    border: 0;
+    background: transparent;
+    color: var(--wp-text);
+  }
+
+  .westan-points-rules {
+    margin-top: 12px;
+
+    span {
+      border: 1px solid var(--wp-border);
+      background: var(--wp-soft);
+      color: var(--wp-muted);
+    }
+
+    b {
+      color: var(--wp-text);
+    }
+  }
+}
+
+.westan-points-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 20px 0;
+  padding: 5px;
+  border: 1px solid var(--wp-border);
+  border-radius: 18px;
+  background: var(--wp-soft);
+
+  button {
+    min-height: 42px;
+    border: 0;
+    border-radius: 14px;
+    background: transparent;
+    color: var(--wp-muted);
+    font-weight: 850;
+
+    &.is-active {
+      background: var(--wp-surface);
+      box-shadow: 0 4px 15px rgba(31, 20, 38, 0.1);
+      color: var(--wp-text);
+    }
+  }
+}
+
+.westan-points-section,
+.westan-points-admin {
+  margin-top: 18px;
+}
+
+.westan-points-section__heading {
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+
+  small,
+  h2 {
+    margin: 0;
+  }
+
+  small {
+    color: var(--wp-accent);
+    font-size: 0.68rem;
+    font-weight: 950;
+    letter-spacing: 0.14em;
+  }
+
+  h2 {
+    font-size: 1.25rem;
+  }
+
+  > span {
+    color: var(--wp-muted);
+    font-size: 0.76rem;
+    font-weight: 750;
+  }
+}
+
+.westan-reward-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.westan-reward-card {
+  overflow: hidden;
+  border: 1px solid var(--wp-border);
+  border-radius: 22px;
+  background: var(--wp-surface);
+  box-shadow: 0 9px 28px rgba(24, 14, 31, 0.06);
+}
+
+.westan-reward-card__visual {
+  display: grid;
+  min-height: 150px;
+  place-items: center;
+  background:
+    linear-gradient(145deg, rgba(161, 47, 226, 0.2), rgba(216, 42, 203, 0.04));
+  color: var(--wp-accent);
+
+  .d-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+  }
+}
+
+.westan-reward-card__content {
+  padding: 16px;
+
+  > small {
+    color: var(--wp-muted);
+    font-size: 0.68rem;
+    font-weight: 750;
+    text-transform: uppercase;
+  }
+
+  h3 {
+    margin: 3px 0 0;
+    font-size: 1.05rem;
+  }
+
+  p {
+    min-height: 38px;
+    margin: 7px 0 15px;
+    color: var(--wp-muted);
+    font-size: 0.82rem;
+    line-height: 1.45;
+  }
+}
+
+.westan-reward-card__footer {
+  justify-content: space-between;
+  gap: 12px;
+
+  strong {
+    color: var(--wp-accent);
+    font-size: 1.1rem;
+
+    span {
+      font-size: 0.7rem;
+    }
+  }
+
+  button {
+    min-height: 36px;
+    padding: 0 15px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--wp-accent);
+    color: #fff;
+    font-weight: 900;
+
+    &:disabled {
+      background: var(--wp-soft);
+      color: var(--wp-muted);
+      cursor: not-allowed;
+    }
+  }
+}
+
+.westan-points-list,
+.westan-points-admin__catalog,
+.westan-points-admin__redemptions {
+  overflow: hidden;
+  border: 1px solid var(--wp-border);
+  border-radius: 20px;
+  background: var(--wp-surface);
+}
+
+.westan-points-list__row,
+.westan-redemption-row,
+.westan-points-admin__catalog article,
+.westan-points-admin__redemptions article {
+  min-height: 66px;
+  padding: 12px 15px;
+  gap: 12px;
+  border-bottom: 1px solid var(--wp-border);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+
+  div {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+  }
+
+  small {
+    color: var(--wp-muted);
+    font-size: 0.73rem;
+  }
+}
+
+.westan-points-list__row {
+  > span {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 11px;
+    background: var(--wp-soft);
+    color: var(--wp-muted);
+  }
+
+  > b {
+    margin-left: auto;
+  }
+
+  &.is-positive > b {
+    color: #1d9c5a;
+  }
+
+  &.is-negative > b {
+    color: #d34848;
+  }
+}
+
+.westan-redemption-row > span,
+.westan-points-admin__redemptions > article > span {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: var(--wp-soft);
+  color: var(--wp-muted);
+  font-size: 0.7rem;
+  font-weight: 850;
+
+  &.is-approved {
+    background: rgba(38, 173, 96, 0.12);
+    color: #16884b;
+  }
+
+  &.is-rejected {
+    background: rgba(211, 72, 72, 0.12);
+    color: #c33d3d;
+  }
+
+  &.is-fulfilled {
+    background: rgba(161, 47, 226, 0.12);
+    color: var(--wp-accent);
+  }
+}
+
+.westan-points-empty {
+  grid-column: 1 / -1;
+  padding: 32px;
+  border: 1px dashed var(--wp-border);
+  border-radius: 18px;
+  color: var(--wp-muted);
+  text-align: center;
+}
+
+.westan-points-admin {
+  padding: 20px;
+  border: 1px solid var(--wp-border);
+  border-radius: 24px;
+  background: var(--wp-soft);
+}
+
+.westan-points-admin__form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+
+  label {
+    display: flex;
+    gap: 5px;
+    flex-direction: column;
+    font-size: 0.75rem;
+    font-weight: 850;
+
+    &.is-wide {
+      grid-column: 1 / -1;
+    }
+  }
+
+  input,
+  select,
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--wp-border);
+    border-radius: 11px;
+    background: var(--wp-surface);
+    color: var(--wp-text);
+  }
+
+  textarea {
+    min-height: 80px;
+  }
+
+.westan-points-admin__form-actions {
+  display: flex;
+  gap: 8px;
+
+  button {
+    width: fit-content;
+    min-height: 40px;
+    padding: 0 16px;
+    border: 1px solid var(--wp-border);
+    border-radius: 12px;
+    background: var(--wp-surface);
+    color: var(--wp-text);
+    font-weight: 900;
+
+    &[type="submit"] {
+      border-color: transparent;
+      background: var(--wp-accent);
+      color: #fff;
+    }
+  }
+}
+}
+
+.westan-points-admin__catalog,
+.westan-points-admin__redemptions {
+  margin-bottom: 24px;
+
+  button {
+    min-height: 32px;
+    padding: 0 10px;
+    border: 1px solid var(--wp-border);
+    border-radius: 10px;
+    background: var(--wp-surface);
+    color: var(--wp-text);
+    font-size: 0.72rem;
+    font-weight: 800;
+  }
+}
+
+.westan-points-admin__adjustment {
+  display: grid;
+  grid-template-columns: 1fr 140px 1fr auto;
+  gap: 9px;
+  margin-top: 20px;
+
+  h3 {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+
+  input,
+  button {
+    min-height: 38px;
+    box-sizing: border-box;
+    border: 1px solid var(--wp-border);
+    border-radius: 10px;
+  }
+
+  input {
+    background: var(--wp-surface);
+    color: var(--wp-text);
+  }
+
+  button {
+    padding: 0 13px;
+    background: #111;
+    color: #fff;
+    font-weight: 850;
+  }
+}
+
+@media (max-width: 600px) {
+  .westan-points-shell {
+    width: min(100% - 18px, 980px);
+    padding-top: 14px;
+  }
+
+  .westan-points-hero {
+    padding: 20px 16px;
+    border-radius: 22px;
+  }
+
+  .westan-points-hero__topline h1 {
+    max-width: 260px;
+  }
+
+  .westan-points-balance {
+    width: auto;
+    min-width: 0;
+  }
+
+  .westan-points-tabs {
+    button {
+      padding: 0 5px;
+      font-size: 0.76rem;
+    }
+  }
+
+  .westan-reward-grid,
+  .westan-points-admin__form,
+  .westan-points-admin__adjustment {
+    grid-template-columns: 1fr;
+  }
+
+  .westan-points-admin__adjustment h3,
+  .westan-points-admin__form label.is-wide {
+    grid-column: 1;
+  }
+
+  .westan-points-admin {
+    padding: 15px;
+  }
+
+  .westan-points-admin__redemptions article {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}
