@@ -3,7 +3,7 @@
 # name: discourse-westan-pontos
 # about: Carteira de pontos e catálogo de benefícios para a comunidade Westan
 # meta_topic_id: 0
-# version: 0.3.0
+# version: 0.3.1
 # authors: Westan
 # url: https://github.com/forumwestan/discourse-westan-pontos
 # required_version: 3.2.0
