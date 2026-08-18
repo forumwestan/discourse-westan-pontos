@@ -3,7 +3,7 @@
 # name: discourse-westan-pontos
 # about: Carteira de pontos e catálogo de benefícios para a comunidade Westan
 # meta_topic_id: 0
-# version: 0.3.2
+# version: 0.3.3
 # authors: Westan
 # url: https://github.com/forumwestan/discourse-westan-pontos
 # required_version: 3.2.0
@@ -19,6 +19,7 @@ register_svg_icon "gear"
 register_svg_icon "check"
 register_svg_icon "xmark"
 register_svg_icon "plus"
+register_svg_icon "coins"
 
 module ::WestanPoints
   PLUGIN_NAME = "discourse-westan-pontos"
