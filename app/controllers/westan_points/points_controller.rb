@@ -22,7 +22,7 @@ module WestanPoints
 
       render json: {
         wallet: wallet_payload(wallet),
-        is_vip: Ledger.vip_member?(current_user),
+        is_multiplier_eligible: Ledger.multiplier_eligible?(current_user),
         rules: rules_payload,
         rewards: rewards.map { |reward| reward_payload(reward, wallet) },
         transactions: wallet.transactions.recent_first.limit(30).map { |item| transaction_payload(item) },
@@ -110,6 +110,7 @@ module WestanPoints
         points_per_topic: SiteSetting.westan_points_per_topic.to_i,
         vip_multiplier: SiteSetting.westan_points_vip_multiplier.to_i,
         vip_group: SiteSetting.westan_points_vip_group.to_s,
+        eligible_vip_group: SiteSetting.westan_points_eligible_vip_group.to_s,
         expiration_cycle_months: Ledger::EXPIRATION_CYCLE_MONTHS,
         expiration_grace_months: Ledger::EXPIRATION_GRACE_MONTHS
       }

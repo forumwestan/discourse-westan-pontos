@@ -117,9 +117,9 @@ module WestanPoints
         )
       end
 
-      def vip_member?(user)
+      def multiplier_eligible?(user)
         setting_value =
-          SiteSetting.westan_points_vip_group.to_s.strip.delete_prefix("@")
+          SiteSetting.westan_points_eligible_vip_group.to_s.strip.delete_prefix("@")
         return false if setting_value.blank? || user.nil?
 
         group = Group.find_by(id: setting_value.to_i) if setting_value.match?(/\A\d+\z/)
@@ -310,7 +310,7 @@ module WestanPoints
         earned_at = (post.created_at || Time.zone.now).in_time_zone
         base_points =
           is_topic ? SiteSetting.westan_points_per_topic.to_i : SiteSetting.westan_points_per_post.to_i
-        multiplier = vip_member?(post.user) ? SiteSetting.westan_points_vip_multiplier.to_i : 1
+        multiplier = multiplier_eligible?(post.user) ? SiteSetting.westan_points_vip_multiplier.to_i : 1
         amount = base_points * [multiplier, 1].max
 
         {

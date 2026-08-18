@@ -43,8 +43,8 @@ export default class WestanPointsHub extends Component {
     return this.data.rules || {};
   }
 
-  get isVip() {
-    return Boolean(this.data.is_vip);
+  get isMultiplierEligible() {
+    return Boolean(this.data.is_multiplier_eligible);
   }
 
   get nextExpiration() {
@@ -401,7 +401,7 @@ export default class WestanPointsHub extends Component {
             <strong>{{this.wallet.balance}}</strong>
             <span>pontos</span>
           </div>
-          {{#if this.isVip}}
+          {{#if this.isMultiplierEligible}}
             <em>VIP {{this.rules.vip_multiplier}}x</em>
           {{/if}}
         </div>
@@ -421,10 +421,11 @@ export default class WestanPointsHub extends Component {
           <div class="westan-points-rules" aria-label="Regras de pontuação">
             <span><b>+{{this.rules.points_per_post}}</b> por post</span>
             <span><b>+{{this.rules.points_per_topic}}</b> por tópico</span>
-            <span><b>{{this.rules.vip_multiplier}}x</b> para VIP</span>
+            <span><b>{{this.rules.vip_multiplier}}x</b> para VIP elegível</span>
             <span><b>Validade:</b> ciclo trimestral</span>
           </div>
-          <p>Participe da comunidade para acumular pontos. Ao criar um tópico você recebe {{this.rules.points_per_topic}} pontos; cada resposta rende {{this.rules.points_per_post}} ponto. Membros VIP recebem tudo em dobro.</p>
+          <p>Participe da comunidade para acumular pontos. Ao criar um tópico você recebe {{this.rules.points_per_topic}} pontos; cada resposta rende {{this.rules.points_per_post}} ponto. Somente membros VIP pagantes, incluídos no grupo elegível, recebem o multiplicador.</p>
+          <p>O VIP resgatado com pontos mantém os benefícios do grupo VIP durante o período da oferta, mas a pontuação continua em 1x.</p>
           <p>Os pontos são organizados em ciclos trimestrais. Por exemplo, tudo o que for conquistado em junho, julho e agosto pode ser usado até 30 de setembro; o saldo restante desse ciclo expira em 1º de outubro.</p>
           <p>Nas trocas, usamos primeiro os pontos do ciclo que vence antes. Assim, somente o saldo não utilizado de cada trimestre expira.</p>
           <p>Benefícios automáticos, como dias de VIP, são ativados na hora. Os demais ficam pendentes até a confirmação da equipe.</p>

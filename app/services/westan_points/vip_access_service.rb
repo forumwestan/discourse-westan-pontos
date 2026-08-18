@@ -105,6 +105,7 @@ module WestanPoints
           group = Group.find_by(id: group_id)
           user = User.find_by(id: user_id)
           next unless group && user
+          next if Ledger.multiplier_eligible?(user)
 
           group.remove(user) if GroupUser.exists?(group_id: group.id, user_id: user.id)
           user.groups.reset

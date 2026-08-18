@@ -4,6 +4,12 @@ Plugin independente para Discourse com carteira de pontos, multiplicador VIP, ca
 
 O grupo VIP padrão é `vip` (mencionado no fórum como `@vip`). O plugin também aceita o ID numérico gravado pelo seletor de grupos do painel administrativo.
 
+## VIP pagante e VIP resgatado
+
+O grupo configurado em `westan_points_vip_group` entrega os benefícios VIP e também recebe os usuários que resgatam dias de VIP com pontos. O multiplicador é separado: somente membros do grupo configurado em `westan_points_eligible_vip_group` recebem pontos em dobro.
+
+Para uma operação manual, crie o grupo `vip_elegivel` e adicione nele somente os membros pagantes. Um pagante deve permanecer também no grupo geral `vip`. Usuários que resgatarem VIP com pontos entram apenas no grupo geral e continuam acumulando pontos em 1x.
+
 O ícone de carteira usa o `wallet-03` da [Hugeicons](https://hugeicons.com/icon/wallet-03), disponibilizado no conjunto gratuito sob licença MIT.
 
 ## Importação de publicações anteriores

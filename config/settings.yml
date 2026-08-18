@@ -25,6 +25,10 @@ plugins:
     default: "vip"
     type: group
 
+  westan_points_eligible_vip_group:
+    default: "vip_elegivel"
+    type: group
+
   westan_points_excluded_categories:
     default: ""
     type: category_list
