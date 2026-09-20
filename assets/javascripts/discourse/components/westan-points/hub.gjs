@@ -4,12 +4,15 @@ import { action } from "@ember/object";
 import { on } from "@ember/modifier";
 import { service } from "@ember/service";
 import { tracked } from "@glimmer/tracking";
+import didInsert from "@ember/render-modifiers/modifiers/did-insert";
+import userSearch from "discourse/lib/user-search";
 import dIcon from "discourse/helpers/d-icon";
 import { ajax } from "discourse/lib/ajax";
-import { popupAjaxError } from "discourse/lib/ajax-error";
+import { extractError, popupAjaxError } from "discourse/lib/ajax-error";
 
 export default class WestanPointsHub extends Component {
   @service currentUser;
+  @service router;
 
   @tracked data = this.args.model;
   @tracked activeSection = "history";
@@ -21,7 +24,19 @@ export default class WestanPointsHub extends Component {
   historyGeneration = 0;
   @tracked isBusy = false;
   @tracked showInfo = false;
-  @tracked showAdmin = false;
+  @tracked adminMessage = "";
+  @tracked transferStep = "form";
+  @tracked reviewedTransfer = null;
+  @tracked selectedRecipient = null;
+  @tracked recipientResults = [];
+  @tracked recipientBusy = false;
+  @tracked recipientError = "";
+  @tracked recipientSearchOpen = false;
+  @tracked recipientIndex = -1;
+  @tracked transferUncertain = false;
+  @tracked transferRefreshWarning = "";
+  @tracked transferReceipt = null;
+  recipientGeneration = 0;
   @tracked editingRewardId = null;
   @tracked rewardDraft = this.emptyRewardDraft();
   @tracked adjustment = { username: "", amount: 0, description: "" };
@@ -75,7 +90,7 @@ export default class WestanPointsHub extends Component {
 
   get canManage() {
     return Boolean(
-      (this.currentUser?.admin || this.currentUser?.moderator) && this.data.admin
+      (this.currentUser?.admin || this.currentUser?.moderator) && (this.data.can_manage || this.data.admin)
     );
   }
 
@@ -140,42 +155,183 @@ export default class WestanPointsHub extends Component {
     ].map((filter) => ({ ...filter, selected: filter.id === this.historyFilter }));
   }
 
+  get isConfigPage() { return Boolean(this.args.configMode && this.canManage); }
+  get isTransferForm() { return this.transferStep === "form"; }
+  get isTransferSuccess() { return this.transferStep === "success"; }
+  get isTransferError() { return this.transferStep === "error"; }
+  get transferReceiptDate() { return this.formatDate(this.transferReceipt?.created_at); }
+  get recipientOptions() {
+    return this.recipientResults.map((user, index) => ({
+      ...user, optionId: `wp-recipient-option-${index}`, highlighted: index === this.recipientIndex,
+    }));
+  }
+  get recipientActiveId() {
+    return this.recipientSearchOpen && this.recipientIndex >= 0 ? `wp-recipient-option-${this.recipientIndex}` : undefined;
+  }
+
+  willDestroy() {
+    super.willDestroy(...arguments);
+    this.recipientGeneration++;
+    this.infoDialog?.close();
+  }
+
   @action
   updateTransfer(event) {
     this.transferDraft = { ...this.transferDraft, [event.target.dataset.field]: event.target.value };
     this.transferRequestId = null;
     this.transferMessage = "";
+    if (event.target.dataset.field === "username") {
+      this.selectedRecipient = null;
+      this.searchRecipients(event.target.value);
+    }
+  }
+
+  async searchRecipients(value) {
+    const generation = ++this.recipientGeneration;
+    const term = value.trim().replace(/^@/, "");
+    this.recipientResults = [];
+    this.recipientIndex = -1;
+    this.recipientError = "";
+    this.recipientSearchOpen = Boolean(term);
+    this.recipientBusy = Boolean(term);
+    if (!term) { return; }
+    try {
+      const results = await userSearch({
+        term, includeGroups: false, includeStagedUsers: false,
+        exclude: [this.currentUser?.username], limit: 6,
+      });
+      if (generation !== this.recipientGeneration || this.isDestroying || this.isDestroyed) { return; }
+      this.recipientResults = (Array.isArray(results) ? results : results?.users || [])
+        .filter(user => user.id > 0 && user.username?.toLowerCase() !== this.currentUser?.username?.toLowerCase())
+        .map(user => ({ id: user.id, username: user.username, name: user.name || user.username,
+          avatar: user.avatar_template?.replace("{size}", "48") }));
+      this.recipientIndex = this.recipientResults.length ? 0 : -1;
+      if (!this.recipientResults.length) { this.recipientError = "Nenhum membro encontrado. Confira o nome ou tente novamente."; }
+    } catch {
+      if (generation === this.recipientGeneration) { this.recipientError = "Não foi possível buscar os membros. Tente digitar novamente."; }
+    } finally {
+      if (generation === this.recipientGeneration && !this.isDestroying && !this.isDestroyed) { this.recipientBusy = false; }
+    }
   }
 
   @action
-  async submitTransfer(event) {
+  keepRecipientFocus(event) { event.preventDefault(); }
+
+  @action
+  selectRecipient(event) {
+    this.chooseRecipient(this.recipientResults.find(user => user.username === event.currentTarget.dataset.username));
+  }
+
+  chooseRecipient(user) {
+    if (!user) { return; }
+    this.selectedRecipient = user;
+    this.transferDraft = { ...this.transferDraft, username: user.username };
+    this.transferRequestId = null;
+    this.transferMessage = "";
+    this.recipientGeneration++;
+    this.recipientSearchOpen = false;
+    this.recipientBusy = false;
+  }
+
+  @action
+  recipientKeydown(event) {
+    if (event.key === "Escape") {
+      this.recipientGeneration++;
+      this.recipientSearchOpen = false;
+      this.recipientBusy = false;
+      event.preventDefault();
+    } else if (["ArrowDown", "ArrowUp"].includes(event.key) && this.recipientResults.length) {
+      event.preventDefault();
+      this.recipientSearchOpen = true;
+      const delta = event.key === "ArrowDown" ? 1 : -1;
+      this.recipientIndex = (this.recipientIndex + delta + this.recipientResults.length) % this.recipientResults.length;
+    } else if (event.key === "Enter" && this.recipientSearchOpen && this.recipientIndex >= 0) {
+      event.preventDefault();
+      this.chooseRecipient(this.recipientResults[this.recipientIndex]);
+    }
+  }
+
+  @action
+  closeRecipientSearch() { this.recipientSearchOpen = false; }
+
+  @action
+  focusTransferStage(element) { element.focus({ preventScroll: true }); }
+
+  @action
+  submitTransfer(event) {
     event.preventDefault();
-    if (this.isBusy) { return; }
+    if (this.isBusy || !this.isTransferForm) { return; }
     const amount = Number(this.transferDraft.amount);
-    const username = this.transferDraft.username.trim().replace(/^@/, "");
-    if (!Number.isSafeInteger(amount) || amount <= 0 || amount > this.wallet.balance || !username) {
-      this.transferMessage = "Informe o @ do membro e um valor inteiro dentro do seu saldo.";
+    const recipient = this.selectedRecipient;
+    if (!recipient || recipient.username !== this.transferDraft.username) {
+      this.transferMessage = "Selecione o destinatário nos resultados da busca.";
       return;
     }
-    if (!window.confirm(`Transferir ${amount} pontos para @${username}?`)) { return; }
+    if (!Number.isSafeInteger(amount) || amount <= 0 || amount > Math.min(this.wallet.balance, 2147483647)) {
+      this.transferMessage = "Informe um valor inteiro, maior que zero e dentro do seu saldo.";
+      return;
+    }
+    this.reviewedTransfer = {
+      username: recipient.username, amount, description: this.transferDraft.description.trim(),
+      name: recipient.name, avatar: recipient.avatar,
+    };
+    this.transferMessage = "";
+    this.transferStep = "review";
+  }
+
+  @action
+  cancelTransfer() {
+    if (this.isBusy || this.transferUncertain) { return; }
+    this.transferStep = "form";
+    this.transferMessage = "";
+  }
+
+  @action
+  async confirmTransfer() {
+    if (this.isBusy || !this.reviewedTransfer || !["review", "error"].includes(this.transferStep)) { return; }
     this.transferRequestId ||= crypto.randomUUID();
+    const { username, amount, description } = this.reviewedTransfer;
     this.isBusy = true;
     this.transferMessage = "";
+    this.transferRefreshWarning = "";
     try {
       const result = await ajax("/westan/pontos/transfer", {
-        type: "POST",
-        data: { ...this.transferDraft, username, request_id: this.transferRequestId },
+        type: "POST", data: { username, amount, description, request_id: this.transferRequestId },
       });
+      if (this.isDestroying || this.isDestroyed) { return; }
       this.data = { ...this.data, wallet: result.wallet };
-      this.transferDraft = { username: "", amount: "", description: "" };
-      this.transferRequestId = null;
+      this.transferReceipt = result.transaction || null;
+      this.transferStep = "success";
+      this.transferUncertain = false;
       this.transferMessage = `${amount} pontos enviados para @${username}.`;
-      await this.refresh();
+      // Failure to reload history must never turn a completed transfer into an error.
+      try { await this.refresh(); }
+      catch { this.transferRefreshWarning = "Transferência concluída. O extrato será atualizado quando você recarregar a página."; }
     } catch (error) {
-      popupAjaxError(error);
+      if (this.isDestroying || this.isDestroyed) { return; }
+      const status = error?.jqXHR?.status ?? error?.status;
+      this.transferUncertain = !status || status >= 500;
+      this.transferStep = "error";
+      this.transferMessage = this.transferUncertain
+        ? "Não foi possível confirmar o resultado com o servidor. Tente novamente para consultar ou concluir a mesma transferência, sem duplicar o envio."
+        : extractError(error) || "Não foi possível transferir os pontos. Confira os dados e tente novamente.";
     } finally {
-      this.isBusy = false;
+      if (!this.isDestroying && !this.isDestroyed) { this.isBusy = false; }
     }
+  }
+
+  @action
+  newTransfer() {
+    if (this.isBusy || !this.isTransferSuccess) { return; }
+    this.transferDraft = { username: "", amount: "", description: "" };
+    this.selectedRecipient = null;
+    this.reviewedTransfer = null;
+    this.transferRequestId = null;
+    this.transferMessage = "";
+    this.transferRefreshWarning = "";
+    this.recipientResults = [];
+    this.transferReceipt = null;
+    this.transferStep = "form";
   }
 
   @action
@@ -305,7 +461,8 @@ export default class WestanPointsHub extends Component {
     this.historyGeneration++;
     this.historyFilter = "all";
     this.historyBusy = false;
-    this.data = await ajax("/westan/pontos");
+    const data = await ajax(this.args.configMode ? "/westan/pontos/admin/config" : "/westan/pontos");
+    if (!this.isDestroying && !this.isDestroyed) { this.data = data; }
   }
 
   @action
@@ -315,12 +472,33 @@ export default class WestanPointsHub extends Component {
 
   @action
   toggleInfo() {
-    this.showInfo = !this.showInfo;
+    if (this.infoDialog?.open) { this.infoDialog.close(); this.showInfo = false; }
+    else { this.showInfo = true; }
   }
 
   @action
-  toggleAdmin() {
-    this.showAdmin = !this.showAdmin;
+  openConfig() { this.router.transitionTo("westan-points-config"); }
+
+  @action
+  backToPoints() { this.router.transitionTo("westan-points"); }
+
+  @action
+  openInfoDialog(element) { this.infoDialog = element; element.showModal(); }
+
+  @action
+  closeInfo() {
+    if (!this.isDestroying && !this.isDestroyed) { this.showInfo = false; }
+    this.infoDialog = null;
+  }
+
+  @action
+  dismissInfoBackdrop(event) {
+    if (event.target === this.infoDialog) {
+      const rect = this.infoDialog.getBoundingClientRect();
+      if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) {
+        this.infoDialog.close();
+      }
+    }
   }
 
   @action
@@ -375,6 +553,7 @@ export default class WestanPointsHub extends Component {
         type: this.editingRewardId ? "PATCH" : "POST",
         data: this.rewardDraft,
       });
+      this.adminMessage = "Benefício salvo.";
       this.editingRewardId = null;
       this.rewardDraft = this.emptyRewardDraft();
       await this.refresh();
@@ -467,6 +646,7 @@ export default class WestanPointsHub extends Component {
         type: "POST",
         data: this.adjustment,
       });
+      this.adminMessage = "Ajuste de pontos aplicado.";
       this.adjustment = { username: "", amount: 0, description: "" };
       await this.refresh();
     } catch (error) {
@@ -478,6 +658,13 @@ export default class WestanPointsHub extends Component {
 
   <template>
     <main class="westan-points-shell">
+      {{#if @configMode}}
+        <header class="westan-points-config-header">
+          <button type="button" {{on "click" this.backToPoints}}>← Voltar aos meus pontos</button>
+          <h1>Configurações do Westan Pontos</h1>
+          <p>Gerencie benefícios, solicitações e ajustes de saldo.</p>
+        </header>
+      {{else}}
       <header class="westan-points-hero">
         <div class="westan-points-hero__topline">
           <div class="westan-points-identity">
@@ -489,7 +676,7 @@ export default class WestanPointsHub extends Component {
           </div>
           <div class="westan-points-hero__actions">
             {{#if this.canManage}}
-              <button type="button" aria-label="Gerenciar benefícios" {{on "click" this.toggleAdmin}}>
+              <button type="button" aria-label="Gerenciar benefícios" {{on "click" this.openConfig}}>
                 {{dIcon "gear"}}
               </button>
             {{/if}}
@@ -507,28 +694,26 @@ export default class WestanPointsHub extends Component {
               <path d="M17.5 15.5C17.7761 15.5 18 15.2761 18 15C18 14.7239 17.7761 14.5 17.5 14.5M17.5 15.5C17.2239 15.5 17 15.2761 17 15C17 14.7239 17.2239 14.5 17.5 14.5M17.5 15.5V14.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </span>
-          <div>
-            <small>Saldo disponível</small>
+          <div class="westan-points-balance__amount">
+            <small>Saldo de pontos</small>
             <strong>{{this.formattedBalance}}</strong>
-            <span>pontos</span>
           </div>
           {{#if this.isMultiplierEligible}}
             <em>VIP {{this.rules.vip_multiplier}}x</em>
           {{/if}}
-        </div>
-
         {{#if this.nextExpiration}}
           <div class="westan-points-expiration" role="status">
             {{dIcon "clock-rotate-left"}}
             <span><b>{{this.nextExpiration.amount}} pontos</b> expiram em {{this.nextExpirationLabel}}</span>
           </div>
         {{/if}}
+        </div>
       </header>
 
       {{#if this.showInfo}}
-        <section class="westan-points-info">
+        <dialog class="westan-points-info" aria-labelledby="wp-info-title" {{didInsert this.openInfoDialog}} {{on "close" this.closeInfo}} {{on "click" this.dismissInfoBackdrop}}>
           <button type="button" aria-label="Fechar" {{on "click" this.toggleInfo}}>{{dIcon "xmark"}}</button>
-          <h2>Como funciona</h2>
+          <h2 id="wp-info-title">Como funciona</h2>
           <div class="westan-points-rules" aria-label="Regras de pontuação">
             <span><b>+{{this.rules.points_per_post}}</b> por post</span>
             <span><b>+{{this.rules.points_per_topic}}</b> por tópico</span>
@@ -541,7 +726,7 @@ export default class WestanPointsHub extends Component {
           <p>Nas trocas, usamos primeiro os pontos do ciclo que vence antes. Assim, somente o saldo não utilizado de cada trimestre expira.</p>
           <p>Benefícios automáticos, como dias de VIP, são ativados na hora. Os demais ficam pendentes até a confirmação da equipe.</p>
           <p>Você também pode transferir pontos para outro membro. As transferências mantêm a validade original dos pontos e não recebem multiplicador VIP.</p>
-        </section>
+        </dialog>
       {{/if}}
 
       <nav class="westan-points-tabs" aria-label="Navegação de pontos">
@@ -553,22 +738,75 @@ export default class WestanPointsHub extends Component {
 
       {{#if this.isTransferSection}}
         <section class="westan-points-section westan-points-transfer">
-          <div class="westan-points-section__heading"><div><small>DE MEMBRO PARA MEMBRO</small><h2>Envie pontos</h2></div>{{dIcon "paper-plane"}}</div>
+          <div class="westan-points-section__heading"><div><small>Transferência</small><h2>Envie pontos</h2></div>{{dIcon "paper-plane"}}</div>
+          {{#if this.isTransferForm}}
           <p>Compartilhe seus pontos com alguém da comunidade.</p>
           <form {{on "submit" this.submitTransfer}}>
             <fieldset disabled={{this.isBusy}}>
               <label for="wp-recipient">Para quem?</label>
-              <input id="wp-recipient" required autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="@nomedousuario" data-field="username" value={{this.transferDraft.username}} {{on "input" this.updateTransfer}} />
+              <div class="westan-points-recipient-picker">
+                <input id="wp-recipient" role="combobox" aria-autocomplete="list" aria-expanded={{this.recipientSearchOpen}} aria-controls="wp-recipient-options" aria-activedescendant={{this.recipientActiveId}} required autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="@nome ou primeiras letras" data-field="username" value={{this.transferDraft.username}} {{on "input" this.updateTransfer}} {{on "keydown" this.recipientKeydown}} {{on "blur" this.closeRecipientSearch}} />
+                {{#if this.recipientSearchOpen}}
+                  <ul id="wp-recipient-options" role="listbox" aria-label="Membros encontrados" class="westan-points-recipient-options">
+                    {{#each this.recipientOptions as |member|}}
+                      <li role="presentation"><button type="button" role="option" id={{member.optionId}} aria-selected={{member.highlighted}} tabindex="-1" data-username={{member.username}} {{on "mousedown" this.keepRecipientFocus}} {{on "click" this.selectRecipient}}>
+                        {{#if member.avatar}}<img src={{member.avatar}} alt="" />{{/if}}
+                        <span><strong>{{member.name}}</strong><small>@{{member.username}}</small></span>
+                      </button></li>
+                    {{/each}}
+                  </ul>
+                  {{#if this.recipientBusy}}<p role="status">Buscando membros…</p>{{/if}}
+                  {{#if this.recipientError}}<p role="status">{{this.recipientError}}</p>{{/if}}
+                {{/if}}
+              </div>
+              {{#if this.selectedRecipient}}<small class="westan-points-recipient-selected">{{dIcon "check"}} Destinatário: @{{this.selectedRecipient.username}}</small>{{/if}}
               <label for="wp-amount">Quantidade de pontos</label>
               <input id="wp-amount" required type="number" min="1" step="1" max={{this.wallet.balance}} inputmode="numeric" placeholder="0" data-field="amount" value={{this.transferDraft.amount}} {{on "input" this.updateTransfer}} />
               <small>Disponível: {{this.formattedBalance}} pontos</small>
               <label for="wp-description">Descrição <small>(opcional)</small></label>
               <textarea id="wp-description" maxlength="200" placeholder="Deixe uma mensagem…" data-field="description" value={{this.transferDraft.description}} {{on "input" this.updateTransfer}}></textarea>
               <p class="westan-points-transfer__notice">Os pontos enviados mantêm a data de expiração original.</p>
-              <button class="westan-points-submit" type="submit" disabled={{this.isBusy}}>{{dIcon "paper-plane"}} {{if this.isBusy "Enviando…" "Transferir pontos"}}</button>
+              <button class="westan-points-submit" type="submit" disabled={{this.isBusy}}>{{dIcon "paper-plane"}} Revisar transferência</button>
             </fieldset>
           </form>
-          {{#if this.transferMessage}}<p class="westan-points-feedback" role="status">{{this.transferMessage}}</p>{{/if}}
+          {{#if this.transferMessage}}<p class="westan-points-feedback" role="alert">{{this.transferMessage}}</p>{{/if}}
+          {{else}}
+            <div class="westan-points-transfer-stage" tabindex="-1" aria-label="Confirmação da transferência" {{didInsert this.focusTransferStage}}>
+              {{#if this.isTransferSuccess}}
+                <div class="westan-points-transfer-success">
+                  <div class="westan-points-success-icon" aria-hidden="true">{{dIcon "check"}}</div>
+                  <h3>Transferência confirmada</h3>
+                  <p role="status">{{this.transferMessage}}</p>
+                  <div class="westan-points-receipt-amount"><strong>{{this.reviewedTransfer.amount}}</strong><span>pontos transferidos</span></div>
+                  <dl class="westan-points-receipt">
+                    <div><dt>Para</dt><dd>{{this.reviewedTransfer.name}}<small>@{{this.reviewedTransfer.username}}</small></dd></div>
+                    {{#if this.reviewedTransfer.description}}<div><dt>Descrição</dt><dd>{{this.reviewedTransfer.description}}</dd></div>{{/if}}
+                    {{#if this.transferReceiptDate}}<div><dt>Data e hora</dt><dd>{{this.transferReceiptDate}}</dd></div>{{/if}}
+                    {{#if this.transferReceipt.id}}<div><dt>Comprovante</dt><dd>#{{this.transferReceipt.id}}</dd></div>{{/if}}
+                    <div><dt>Saldo restante</dt><dd>{{this.formattedBalance}} pontos</dd></div>
+                  </dl>
+                  {{#if this.transferRefreshWarning}}<p role="status">{{this.transferRefreshWarning}}</p>{{/if}}
+                  <button type="button" class="westan-points-submit" disabled={{this.isBusy}} {{on "click" this.newTransfer}}>Fazer outra transferência</button>
+                </div>
+              {{else}}
+                <h3>{{if this.isTransferError "Não foi possível confirmar a transferência" "Confira antes de confirmar"}}</h3>
+                <div class="westan-points-transfer-recipient">
+                  {{#if this.reviewedTransfer.avatar}}<img src={{this.reviewedTransfer.avatar}} alt="" />{{/if}}
+                  <div><strong>{{this.reviewedTransfer.name}}</strong><small>@{{this.reviewedTransfer.username}}</small></div>
+                </div>
+                <dl>
+                  <div><dt>Quantidade</dt><dd>{{this.reviewedTransfer.amount}} pontos</dd></div>
+                  {{#if this.reviewedTransfer.description}}<div><dt>Descrição</dt><dd>{{this.reviewedTransfer.description}}</dd></div>{{/if}}
+                </dl>
+                <p class="westan-points-transfer__notice">Os pontos serão descontados do seu saldo e manterão a validade original.</p>
+                {{#if this.transferMessage}}<p class="westan-points-feedback" role="alert">{{this.transferMessage}}</p>{{/if}}
+                <div class="westan-points-transfer-actions">
+                  <button type="button" class="westan-points-submit" disabled={{this.isBusy}} {{on "click" this.confirmTransfer}}>{{if this.isBusy "Confirmando…" (if this.isTransferError "Tentar novamente" "Confirmar transferência")}}</button>
+                  {{#unless this.transferUncertain}}<button type="button" class="westan-points-cancel" disabled={{this.isBusy}} {{on "click" this.cancelTransfer}}>{{if this.isTransferError "Voltar e corrigir" "Cancelar"}}</button>{{/unless}}
+                </div>
+              {{/if}}
+            </div>
+          {{/if}}
         </section>
       {{/if}}
 
@@ -642,10 +880,13 @@ export default class WestanPointsHub extends Component {
         </section>
       {{/if}}
 
-      {{#if this.showAdmin}}
+      {{/if}}
+
+      {{#if this.isConfigPage}}
         <section class="westan-points-admin">
           <div class="westan-points-section__heading"><div><small>ADMINISTRAÇÃO</small><h2>Gerenciar benefícios</h2></div></div>
 
+          {{#if this.adminMessage}}<p role="status" class="westan-points-feedback">{{this.adminMessage}}</p>{{/if}}
           <form class="westan-points-admin__form" {{on "submit" this.createReward}}>
             <label>Título<input required value={{this.rewardDraft.title}} data-field="title" {{on "input" this.updateRewardDraft}} /></label>
             <label>Custo em pontos<input required type="number" min="1" value={{this.rewardDraft.cost}} data-field="cost" {{on "input" this.updateRewardDraft}} /></label>

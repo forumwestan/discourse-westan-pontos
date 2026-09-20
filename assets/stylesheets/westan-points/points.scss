@@ -7,7 +7,7 @@
   --wp-border: color-mix(in srgb, var(--primary, #17131d) 13%, transparent);
   --wp-text: var(--primary, #17131d);
   --wp-muted: color-mix(in srgb, var(--primary, #17131d) 60%, transparent);
-  --wp-mint: #00e99a;
+  --wp-lilac: #DEC5EE;
   width: min(100% - 24px, 820px);
   margin: 0 auto;
   padding: 28px 0 64px;
@@ -65,7 +65,7 @@
   padding: 14px 20px;
   font-weight: 700;
 }
-.westan-points-submit { background: var(--wp-mint); color: #10271e; width: 100%; }
+.westan-points-submit { background: var(--wp-lilac); color: #301a40; width: 100%; }
 .westan-points-load-more { background: var(--wp-soft); color: var(--wp-text); display: block; margin: 16px auto; }
 .westan-points-feedback { padding: 14px; border: 1px solid var(--wp-border); border-radius: 14px; }
 .westan-points-filters {
@@ -147,14 +147,17 @@
 .westan-points-balance {
   position: relative;
   overflow: hidden;
-  min-height: 172px;
-  margin-top: 28px;
-  padding: 24px;
-  gap: 14px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  box-sizing: border-box;
+  min-height: 0;
+  margin-top: 22px;
+  padding: 18px 20px;
+  gap: 10px 14px;
   border: 0;
   border-radius: 30px;
-  background: var(--wp-mint);
-  color: #10271e;
+  background: var(--wp-lilac);
+  color: #301a40;
 
   &::after {
     content: "";
@@ -163,16 +166,16 @@
     height: 220px;
     right: -130px;
     top: -120px;
-    border: 1px solid #10271e40;
+    border: 1px solid #301a4040;
     border-radius: 45%;
-    box-shadow: 0 0 0 22px #10271e0d, 0 0 0 44px #10271e0d;
+    box-shadow: 0 0 0 22px #301a400d, 0 0 0 44px #301a400d;
     transform: rotate(30deg);
     pointer-events: none;
   }
 
-  div {
+  .westan-points-balance__amount {
     display: grid;
-    grid-template-columns: auto auto;
+    grid-template-columns: minmax(0, 1fr);
     align-items: baseline;
     column-gap: 7px;
     min-width: 0;
@@ -180,19 +183,19 @@
 
   small {
     grid-column: 1 / -1;
-    color: #204d3c;
+    color: #4a3359;
     font-size: 0.85rem;
     font-weight: 600;
   }
 
   strong {
-    font-size: clamp(2.5rem, 8vw, 4rem);
+    font-size: clamp(2.2rem, 7vw, 3.1rem);
     letter-spacing: -0.05em;
     line-height: 1;
   }
 
   span {
-    color: #204d3c;
+    color: #4a3359;
     font-size: 0.82rem;
   }
 
@@ -208,7 +211,6 @@
   }
 
   &.is-large-number {
-    flex-wrap: wrap;
     strong { font-size: clamp(1.35rem, 5vw, 2.4rem); }
   }
 }
@@ -220,8 +222,8 @@
   flex: 0 0 auto;
   place-items: center;
   border-radius: 14px;
-  background: #10271e12;
-  color: #10271e !important;
+  background: #301a4012;
+  color: #301a40 !important;
 
   .d-icon,
   .westan-points-wallet-icon {
@@ -253,34 +255,42 @@
 .westan-points-expiration {
   display: flex;
   width: fit-content;
-  margin-top: 12px;
-  padding: 8px 11px;
+  grid-column: 1 / -1;
+  margin-top: 2px;
+  padding: 8px 0 0;
   align-items: center;
   gap: 8px;
-  border: 1px solid var(--wp-border);
-  border-radius: 12px;
-  background: rgba(249, 217, 83, 0.09);
-  color: var(--wp-muted);
+  border: 0;
+  border-top: 1px solid #301a4022;
+  border-radius: 0;
+  background: transparent;
+  color: #4a3359;
   font-size: 0.76rem;
 
   .d-icon {
     width: 13px;
     height: 13px;
-    color: var(--wp-text);
+    color: #301a40;
   }
 
   b {
-    color: var(--wp-text);
+    color: #301a40;
   }
 }
 
 .westan-points-info {
   position: relative;
-  margin-top: 14px;
-  padding: 18px 50px 18px 18px;
+  margin: auto;
+  box-sizing: border-box;
+  width: min(560px, calc(100% - 32px));
+  max-height: 80dvh;
+  overflow-y: auto;
+  padding: 24px 48px 24px 24px;
+  color: var(--wp-text);
+  &::backdrop { background: #0008; }
   border: 1px solid color-mix(in srgb, var(--wp-accent) 34%, transparent);
   border-radius: 18px;
-  background: color-mix(in srgb, var(--wp-accent) 8%, var(--wp-surface));
+  background: var(--wp-surface);
 
   h2,
   p {
@@ -352,7 +362,7 @@
 
     &.is-active {
       color: var(--wp-text);
-      span { background: var(--wp-mint); color: #10271e; border-color: transparent; }
+      span { background: var(--wp-lilac); color: #301a40; border-color: transparent; }
     }
   }
 }
@@ -536,7 +546,11 @@
   strong { overflow-wrap: anywhere; }
 
   &.is-positive > b {
-    color: #1d9c5a;
+    color: #301a40;
+    background: var(--wp-lilac);
+    border-radius: 10px;
+    padding: 5px 9px;
+    small { color: #4a3359; }
   }
 
   &.is-negative > b {
@@ -554,8 +568,8 @@
   font-weight: 850;
 
   &.is-approved {
-    background: rgba(38, 173, 96, 0.12);
-    color: #16884b;
+    background: var(--wp-lilac);
+    color: #301a40;
   }
 
   &.is-rejected {
@@ -735,4 +749,93 @@
     align-items: flex-start;
     flex-wrap: wrap;
   }
+}
+
+.westan-points-recipient-picker { position: relative; }
+.westan-points-recipient-options {
+  position: absolute;
+  z-index: 20;
+  inset-inline: 0;
+  top: 100%;
+  max-height: 280px;
+  overflow-y: auto;
+  margin: 4px 0 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--wp-border);
+  border-radius: 14px;
+  background: var(--wp-surface);
+  box-shadow: 0 8px 24px #0002;
+  &:empty { display: none; }
+  button {
+    display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px;
+    text-align: start; background: transparent; color: var(--wp-text); border: 0; border-radius: 9px;
+    &[aria-selected="true"], &:hover { background: var(--wp-lilac); color: #301a40; small { color: #4a3359; } }
+  }
+  img { width: 36px; height: 36px; border-radius: 50%; }
+  span { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+}
+.westan-points-recipient-selected { display: block; margin-top: 8px; }
+.westan-points-transfer-stage {
+  animation: wp-transfer-enter 160ms ease-out;
+  &:focus { outline: none; }
+  h3 { font-size: 1.15rem; margin: 20px 0; }
+  dl { padding: 16px; border-radius: 16px; background: var(--wp-soft); }
+  dl > div { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 16px; margin: 8px 0; }
+  dt { color: var(--wp-muted); }
+  dd { margin: 0; font-weight: 650; overflow-wrap: anywhere; white-space: pre-wrap; }
+}
+.westan-points-transfer-recipient {
+  display: flex; align-items: center; gap: 12px;
+  img { width: 44px; height: 44px; border-radius: 50%; }
+  div { display: grid; overflow-wrap: anywhere; }
+}
+.westan-points-transfer-actions { display: flex; flex-wrap: wrap; gap: 10px; .westan-points-submit { flex: 1; width: auto; } }
+.westan-points-transfer-success {
+  padding: 16px 0 2px;
+  text-align: center;
+  h3 { margin: 18px 0 8px; font-size: 1.4rem; }
+  > p { margin: 0 auto 18px; color: var(--wp-muted); }
+  .westan-points-submit { max-width: 440px; }
+  .westan-points-receipt {
+    max-width: 440px;
+    margin: 22px auto;
+    padding: 8px 18px;
+    border: 1px solid var(--wp-border);
+    text-align: start;
+    > div { padding: 12px 0; margin: 0; grid-template-columns: minmax(100px, .8fr) minmax(0, 1.2fr); }
+    > div + div { border-top: 1px solid var(--wp-border); }
+    dd { text-align: end; }
+    small { display: block; font-weight: 400; margin-top: 3px; }
+  }
+}
+.westan-points-success-icon {
+  display: grid;
+  place-items: center;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: #d9f3e2;
+  color: #267744;
+  .d-icon { width: 34px; height: 34px; }
+}
+.westan-points-receipt-amount {
+  display: grid; gap: 4px;
+  strong { font-size: 2.6rem; line-height: 1.1; letter-spacing: -.04em; overflow-wrap: anywhere; }
+  span { font-size: .85rem; color: var(--wp-muted); }
+}
+.westan-points-cancel, .westan-points-config-header button {
+  border: 1px solid var(--wp-border); border-radius: 14px; padding: 12px 18px;
+  color: var(--wp-text); background: var(--wp-surface);
+}
+.westan-points-config-header { h1 { margin-top: 20px; } p { color: var(--wp-muted); } }
+.westan-points-admin__form input, .westan-points-admin__form select { min-height: 40px; padding: 8px; }
+@keyframes wp-transfer-enter { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .westan-points-transfer-stage { animation: none; } }
+@media (max-width: 400px) {
+  .westan-points-balance { padding: 16px 12px; gap: 10px; }
+  .westan-points-balance__icon { width: 34px; height: 34px; }
+  .westan-points-transfer { padding: 18px; }
+  .westan-points-transfer-stage dl > div { grid-template-columns: 1fr; gap: 2px; }
 }

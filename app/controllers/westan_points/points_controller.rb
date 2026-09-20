@@ -8,6 +8,7 @@ module WestanPoints
 
     before_action :ensure_logged_in
     before_action :ensure_staff, only: %i[
+      configuration
       create_reward
       update_reward
       update_redemption
@@ -27,12 +28,16 @@ module WestanPoints
         rewards: rewards.map { |reward| reward_payload(reward, wallet) },
         **history_payload,
         redemptions: Redemption.where(user_id: current_user.id).includes(:reward, :vip_grant).recent_first.limit(30).map { |item| redemption_payload(item) },
-        admin: staff_payload
+        can_manage: current_user.staff?
       }
     end
 
     def transactions
       render json: history_payload
+    end
+
+    def configuration
+      render json: { can_manage: true, admin: staff_payload }
     end
 
     def transfer

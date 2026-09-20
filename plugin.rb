@@ -3,7 +3,7 @@
 # name: discourse-westan-pontos
 # about: Carteira de pontos e catálogo de benefícios para a comunidade Westan
 # meta_topic_id: 0
-# version: 0.5.0
+# version: 0.6.0
 # authors: Westan
 # url: https://github.com/forumwestan/discourse-westan-pontos
 # required_version: 3.2.0
@@ -48,6 +48,7 @@ after_initialize do
   WestanPoints::Engine.routes.draw do
     get "/" => "points#index"
     get "/transactions" => "points#transactions"
+    get "/admin/config" => "points#configuration"
     post "/transfer" => "points#transfer"
     post "/redeem" => "points#redeem"
     post "/admin/rewards" => "points#create_reward"
@@ -59,6 +60,7 @@ after_initialize do
   Discourse::Application.routes.prepend do
     get "/westan/pontos" => "westan_points/points#index"
     get "/westan/pontos/transactions" => "westan_points/points#transactions"
+    get "/westan/pontos/admin/config" => "westan_points/points#configuration"
     post "/westan/pontos/transfer" => "westan_points/points#transfer"
     post "/westan/pontos/redeem" => "westan_points/points#redeem"
     post "/westan/pontos/admin/rewards" => "westan_points/points#create_reward"
@@ -69,6 +71,7 @@ after_initialize do
 
   Discourse::Application.routes.append do
     get "/pontos" => "list#latest"
+    get "/config" => "list#latest"
     get "/pontos/*path" => "list#latest"
   end
 end
