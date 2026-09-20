@@ -146,6 +146,7 @@
 
 .westan-points-balance {
   position: relative;
+  isolation: isolate;
   overflow: hidden;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -162,14 +163,13 @@
   &::after {
     content: "";
     position: absolute;
-    width: 220px;
-    height: 220px;
-    right: -130px;
-    top: -120px;
-    border: 1px solid #301a4040;
-    border-radius: 45%;
-    box-shadow: 0 0 0 22px #301a400d, 0 0 0 44px #301a400d;
-    transform: rotate(30deg);
+    z-index: -1;
+    width: 44%;
+    height: 100%;
+    right: -14px;
+    top: 0;
+    background: url("https://www.westan.com.br/wp-content/uploads/2026/09/westan-logo-faixa.png") center right / contain no-repeat;
+    opacity: 0.55;
     pointer-events: none;
   }
 
