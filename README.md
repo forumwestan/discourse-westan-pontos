@@ -2,6 +2,20 @@
 
 Plugin independente para Discourse com carteira de pontos, multiplicador VIP, catálogo de benefícios e solicitações de troca.
 
+## Transferências e extrato (0.5.0)
+
+A aba **Transferir** permite enviar uma quantidade inteira de pontos para um `@username`, com descrição opcional de até 200 caracteres. O usuário confirma o destinatário e o valor antes do envio. O saldo é debitado e creditado na mesma transação de banco, com bloqueio das duas carteiras em ordem consistente e identificação única da solicitação para evitar duplicação nas tentativas repetidas.
+
+Transferências não recebem o multiplicador VIP, não aumentam o total de pontos conquistados e preservam a validade original de cada parcela enviada. Os pontos que vencem primeiro são utilizados primeiro. O extrato registra os dois lados da operação, além de publicações, ajustes administrativos, trocas, estornos e expirações; permite filtrar e carregar registros anteriores em páginas de 30 itens.
+
+A página usa as variáveis de cores do Discourse (`--primary` e `--secondary`) para acompanhar o tema ativo. O cartão de saldo tem destaque verde e os atalhos dão acesso a transferências, extrato, benefícios e trocas.
+
+### Validação
+
+Teste isolado da distribuição de pontos por vencimento: `ruby test/bucket_allocator_test.rb`.
+
+Com o plugin instalado em um ambiente de testes Discourse, execute `bundle exec rspec plugins/discourse-westan-pontos/spec`. Os testes de integração cobrem saldo, repetição da solicitação, validação, rollback e vencimentos. A prévia estática local usa dados demonstrativos e não executa transferências reais.
+
 O grupo VIP padrão é `vip` (mencionado no fórum como `@vip`). O plugin também aceita o ID numérico gravado pelo seletor de grupos do painel administrativo.
 
 ## VIP pagante e VIP resgatado

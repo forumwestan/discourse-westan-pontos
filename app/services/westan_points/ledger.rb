@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require "set"
+require "time"
+require_relative "bucket_allocator"
 
 module WestanPoints
   class Ledger
@@ -256,37 +258,14 @@ module WestanPoints
         stats
       end
 
+      def available_buckets(user_id:)
+        remaining_buckets(user_id: user_id)
+      end
+
       private
 
       def remaining_buckets(user_id:)
-        positives =
-          Transaction
-            .active
-            .where(user_id: user_id)
-            .where("amount > 0")
-            .to_a
-            .sort_by do |transaction|
-              [
-                transaction.expires_at.present? ? 0 : 1,
-                transaction.expires_at&.to_i || 0,
-                transaction.created_at.to_i,
-                transaction.id
-              ]
-            end
-        consumed = -Transaction.active.where(user_id: user_id).where("amount < 0").sum(:amount)
-
-        positives.filter_map do |transaction|
-          used = [consumed, transaction.amount].min
-          consumed -= used
-          remaining = transaction.amount - used
-          next unless remaining.positive?
-
-          {
-            transaction_id: transaction.id,
-            amount: remaining,
-            expires_at: transaction.expires_at
-          }
-        end
+        BucketAllocator.remaining(Transaction.active.where(user_id: user_id).order(:id))
       end
 
       def eligible_post?(post)

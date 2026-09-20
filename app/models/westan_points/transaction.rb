@@ -4,7 +4,7 @@ module WestanPoints
   class Transaction < ActiveRecord::Base
     self.table_name = "westan_points_transactions"
 
-    KINDS = %w[post topic redemption refund adjustment expiration].freeze
+    KINDS = %w[post topic redemption refund adjustment expiration transfer_in transfer_out].freeze
 
     belongs_to :wallet, class_name: "WestanPoints::Wallet", inverse_of: :transactions
     belongs_to :user

@@ -25,10 +25,26 @@ module WestanPoints
         is_multiplier_eligible: Ledger.multiplier_eligible?(current_user),
         rules: rules_payload,
         rewards: rewards.map { |reward| reward_payload(reward, wallet) },
-        transactions: wallet.transactions.recent_first.limit(30).map { |item| transaction_payload(item) },
+        **history_payload,
         redemptions: Redemption.where(user_id: current_user.id).includes(:reward, :vip_grant).recent_first.limit(30).map { |item| redemption_payload(item) },
         admin: staff_payload
       }
+    end
+
+    def transactions
+      render json: history_payload
+    end
+
+    def transfer
+      RateLimiter.new(current_user, "westan-points-transfer", 10, 1.minute).performed!
+      transaction = TransferService.transfer!(
+        sender: current_user, username: params[:username], amount: params[:amount],
+        description: params[:description], request_id: params[:request_id]
+      )
+      render json: { success: true, transaction: transaction_payload(transaction),
+                     wallet: wallet_payload(Wallet.find_by!(user_id: current_user.id)) }
+    rescue TransferService::InvalidTransfer => error
+      render json: { errors: [error.message] }, status: :unprocessable_entity
     end
 
     def redeem
@@ -82,6 +98,19 @@ module WestanPoints
     end
 
     private
+
+    def history_payload
+      scope = Transaction.where(user_id: current_user.id).order(id: :desc)
+      scope = scope.where("id < ?", params[:before].to_i) if params[:before].present?
+      case params[:filter]
+      when "incoming" then scope = scope.where("amount > 0")
+      when "outgoing" then scope = scope.where("amount < 0")
+      when "transfers" then scope = scope.where(kind: %w[transfer_in transfer_out])
+      end
+      rows = scope.limit(31).to_a
+      { transactions: rows.first(30).map { |item| transaction_payload(item) },
+        next_cursor: rows.length > 30 ? rows[29].id : nil }
+    end
 
     def ensure_staff
       raise Discourse::InvalidAccess unless current_user&.staff?
@@ -152,6 +181,9 @@ module WestanPoints
         balance_after: transaction.balance_after,
         kind: transaction.kind,
         description: transaction.description,
+        note: transaction.metadata["note"],
+        counterparty_username: transaction.metadata["counterparty_username"],
+        origin: transaction.kind.start_with?("transfer_") ? "member" : "system",
         reversed: transaction.reversed_at.present?,
         expires_at: transaction.expires_at,
         created_at: transaction.created_at

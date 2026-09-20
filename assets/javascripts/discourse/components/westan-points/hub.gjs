@@ -12,7 +12,13 @@ export default class WestanPointsHub extends Component {
   @service currentUser;
 
   @tracked data = this.args.model;
-  @tracked activeSection = "rewards";
+  @tracked activeSection = "history";
+  @tracked transferDraft = { username: "", amount: "", description: "" };
+  @tracked transferRequestId = null;
+  @tracked transferMessage = "";
+  @tracked historyFilter = "all";
+  @tracked historyBusy = false;
+  historyGeneration = 0;
   @tracked isBusy = false;
   @tracked showInfo = false;
   @tracked showAdmin = false;
@@ -99,7 +105,106 @@ export default class WestanPointsHub extends Component {
       amount_label: `${item.amount > 0 ? "+" : ""}${item.amount}`,
       amount_class: item.amount >= 0 ? "is-positive" : "is-negative",
       date_label: this.formatDate(item.created_at),
+      icon: item.amount > 0 ? "arrow-down" : "arrow-up",
+      origin_label: item.origin === "member" ? `@${item.counterparty_username}` : "Sistema Westan",
+      status_label: item.reversed ? "Anulado" : "Concluído",
     }));
+  }
+
+  get userAvatarUrl() {
+    return this.currentUser?.avatar_template?.replace("{size}", "96");
+  }
+
+  get formattedBalance() {
+    return new Intl.NumberFormat("pt-BR").format(this.wallet.balance);
+  }
+
+  get balanceClass() {
+    return this.formattedBalance.length > 9 ? "westan-points-balance is-large-number" : "westan-points-balance";
+  }
+
+  get isTransferSection() {
+    return this.activeSection === "transfer";
+  }
+
+  get transferTabClass() {
+    return this.isTransferSection ? "is-active" : "";
+  }
+
+  get historyFilters() {
+    return [
+      { id: "all", label: "Tudo" },
+      { id: "incoming", label: "Entradas" },
+      { id: "outgoing", label: "Saídas" },
+      { id: "transfers", label: "Transferências" },
+    ].map((filter) => ({ ...filter, selected: filter.id === this.historyFilter }));
+  }
+
+  @action
+  updateTransfer(event) {
+    this.transferDraft = { ...this.transferDraft, [event.target.dataset.field]: event.target.value };
+    this.transferRequestId = null;
+    this.transferMessage = "";
+  }
+
+  @action
+  async submitTransfer(event) {
+    event.preventDefault();
+    if (this.isBusy) { return; }
+    const amount = Number(this.transferDraft.amount);
+    const username = this.transferDraft.username.trim().replace(/^@/, "");
+    if (!Number.isSafeInteger(amount) || amount <= 0 || amount > this.wallet.balance || !username) {
+      this.transferMessage = "Informe o @ do membro e um valor inteiro dentro do seu saldo.";
+      return;
+    }
+    if (!window.confirm(`Transferir ${amount} pontos para @${username}?`)) { return; }
+    this.transferRequestId ||= crypto.randomUUID();
+    this.isBusy = true;
+    this.transferMessage = "";
+    try {
+      const result = await ajax("/westan/pontos/transfer", {
+        type: "POST",
+        data: { ...this.transferDraft, username, request_id: this.transferRequestId },
+      });
+      this.data = { ...this.data, wallet: result.wallet };
+      this.transferDraft = { username: "", amount: "", description: "" };
+      this.transferRequestId = null;
+      this.transferMessage = `${amount} pontos enviados para @${username}.`;
+      await this.refresh();
+    } catch (error) {
+      popupAjaxError(error);
+    } finally {
+      this.isBusy = false;
+    }
+  }
+
+  @action
+  async changeHistoryFilter(event) {
+    this.historyFilter = event.currentTarget.dataset.filter;
+    await this.fetchHistory(false);
+  }
+
+  @action
+  async loadMoreHistory() {
+    if (this.historyBusy || !this.data.next_cursor) { return; }
+    await this.fetchHistory(true);
+  }
+
+  async fetchHistory(append) {
+    const generation = ++this.historyGeneration;
+    this.historyBusy = true;
+    try {
+      const result = await ajax("/westan/pontos/transactions", {
+        data: { filter: this.historyFilter, before: append ? this.data.next_cursor : undefined },
+      });
+      if (generation !== this.historyGeneration) { return; }
+      this.data = { ...this.data, ...result,
+        transactions: append ? [...this.data.transactions, ...result.transactions] : result.transactions };
+    } catch (error) {
+      popupAjaxError(error);
+    } finally {
+      if (generation === this.historyGeneration) { this.historyBusy = false; }
+    }
   }
 
   get redemptions() {
@@ -197,6 +302,9 @@ export default class WestanPointsHub extends Component {
   }
 
   async refresh() {
+    this.historyGeneration++;
+    this.historyFilter = "all";
+    this.historyBusy = false;
     this.data = await ajax("/westan/pontos");
   }
 
@@ -372,9 +480,12 @@ export default class WestanPointsHub extends Component {
     <main class="westan-points-shell">
       <header class="westan-points-hero">
         <div class="westan-points-hero__topline">
-          <div>
+          <div class="westan-points-identity">
+            {{#if this.userAvatarUrl}}<img class="westan-points-avatar" src={{this.userAvatarUrl}} alt="" />{{/if}}
+            <div>
             <p>Westan Pontos</p>
             <h1>{{this.userDisplayName}}</h1>
+            </div>
           </div>
           <div class="westan-points-hero__actions">
             {{#if this.canManage}}
@@ -388,7 +499,7 @@ export default class WestanPointsHub extends Component {
           </div>
         </div>
 
-        <div class="westan-points-balance">
+        <div class={{this.balanceClass}}>
           <span class="westan-points-balance__icon">
             <svg class="westan-points-wallet-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M3 8.5H15C17.8284 8.5 19.2426 8.5 20.1213 9.37868C21 10.2574 21 11.6716 21 14.5V15.5C21 18.3284 21 19.7426 20.1213 20.6213C19.2426 21.5 17.8284 21.5 15 21.5H9C6.17157 21.5 4.75736 21.5 3.87868 20.6213C3 19.7426 3 18.3284 3 15.5V8.5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
@@ -398,7 +509,7 @@ export default class WestanPointsHub extends Component {
           </span>
           <div>
             <small>Saldo disponível</small>
-            <strong>{{this.wallet.balance}}</strong>
+            <strong>{{this.formattedBalance}}</strong>
             <span>pontos</span>
           </div>
           {{#if this.isMultiplierEligible}}
@@ -429,14 +540,37 @@ export default class WestanPointsHub extends Component {
           <p>Os pontos são organizados em ciclos trimestrais. Por exemplo, tudo o que for conquistado em junho, julho e agosto pode ser usado até 30 de setembro; o saldo restante desse ciclo expira em 1º de outubro.</p>
           <p>Nas trocas, usamos primeiro os pontos do ciclo que vence antes. Assim, somente o saldo não utilizado de cada trimestre expira.</p>
           <p>Benefícios automáticos, como dias de VIP, são ativados na hora. Os demais ficam pendentes até a confirmação da equipe.</p>
+          <p>Você também pode transferir pontos para outro membro. As transferências mantêm a validade original dos pontos e não recebem multiplicador VIP.</p>
         </section>
       {{/if}}
 
       <nav class="westan-points-tabs" aria-label="Navegação de pontos">
-        <button type="button" class={{this.rewardsTabClass}} data-section="rewards" {{on "click" this.selectSection}}>Benefícios</button>
-        <button type="button" class={{this.historyTabClass}} data-section="history" {{on "click" this.selectSection}}>Histórico</button>
-        <button type="button" class={{this.redemptionsTabClass}} data-section="redemptions" {{on "click" this.selectSection}}>Minhas trocas</button>
+        <button type="button" class={{this.transferTabClass}} aria-pressed={{this.isTransferSection}} data-section="transfer" {{on "click" this.selectSection}}><span>{{dIcon "paper-plane"}}</span>Transferir</button>
+        <button type="button" class={{this.historyTabClass}} aria-pressed={{this.isHistorySection}} data-section="history" {{on "click" this.selectSection}}><span>{{dIcon "clock-rotate-left"}}</span>Extrato</button>
+        <button type="button" class={{this.rewardsTabClass}} aria-pressed={{this.isRewardsSection}} data-section="rewards" {{on "click" this.selectSection}}><span>{{dIcon "gift"}}</span>Benefícios</button>
+        <button type="button" class={{this.redemptionsTabClass}} aria-pressed={{this.isRedemptionsSection}} data-section="redemptions" {{on "click" this.selectSection}}><span>{{dIcon "coins"}}</span>Minhas trocas</button>
       </nav>
+
+      {{#if this.isTransferSection}}
+        <section class="westan-points-section westan-points-transfer">
+          <div class="westan-points-section__heading"><div><small>DE MEMBRO PARA MEMBRO</small><h2>Envie pontos</h2></div>{{dIcon "paper-plane"}}</div>
+          <p>Compartilhe seus pontos com alguém da comunidade.</p>
+          <form {{on "submit" this.submitTransfer}}>
+            <fieldset disabled={{this.isBusy}}>
+              <label for="wp-recipient">Para quem?</label>
+              <input id="wp-recipient" required autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="@nomedousuario" data-field="username" value={{this.transferDraft.username}} {{on "input" this.updateTransfer}} />
+              <label for="wp-amount">Quantidade de pontos</label>
+              <input id="wp-amount" required type="number" min="1" step="1" max={{this.wallet.balance}} inputmode="numeric" placeholder="0" data-field="amount" value={{this.transferDraft.amount}} {{on "input" this.updateTransfer}} />
+              <small>Disponível: {{this.formattedBalance}} pontos</small>
+              <label for="wp-description">Descrição <small>(opcional)</small></label>
+              <textarea id="wp-description" maxlength="200" placeholder="Deixe uma mensagem…" data-field="description" value={{this.transferDraft.description}} {{on "input" this.updateTransfer}}></textarea>
+              <p class="westan-points-transfer__notice">Os pontos enviados mantêm a data de expiração original.</p>
+              <button class="westan-points-submit" type="submit" disabled={{this.isBusy}}>{{dIcon "paper-plane"}} {{if this.isBusy "Enviando…" "Transferir pontos"}}</button>
+            </fieldset>
+          </form>
+          {{#if this.transferMessage}}<p class="westan-points-feedback" role="status">{{this.transferMessage}}</p>{{/if}}
+        </section>
+      {{/if}}
 
       {{#if this.isRewardsSection}}
         <section class="westan-points-section">
@@ -473,18 +607,22 @@ export default class WestanPointsHub extends Component {
 
       {{#if this.isHistorySection}}
         <section class="westan-points-section">
-          <div class="westan-points-section__heading"><div><small>EXTRATO</small><h2>Histórico de pontos</h2></div></div>
-          <div class="westan-points-list">
+          <div class="westan-points-section__heading"><div><small>SUA CONTA</small><h2>Movimentações</h2></div>{{dIcon "clock-rotate-left"}}</div>
+          <div class="westan-points-filters" aria-label="Filtrar movimentações">
+            {{#each this.historyFilters as |filter|}}<button type="button" aria-pressed={{filter.selected}} data-filter={{filter.id}} {{on "click" this.changeHistoryFilter}}>{{filter.label}}</button>{{/each}}
+          </div>
+          <div class="westan-points-list" aria-busy={{this.historyBusy}}>
             {{#each this.transactions as |item|}}
               <article class={{concat "westan-points-list__row " item.amount_class}}>
-                <span>{{dIcon "clock-rotate-left"}}</span>
-                <div><strong>{{item.description}}</strong><small>{{item.date_label}}</small></div>
-                <b>{{item.amount_label}}</b>
+                <span>{{dIcon item.icon}}</span>
+                <div><strong>{{item.description}}</strong><small>{{item.origin_label}} · {{item.date_label}}</small>{{#if item.note}}<p>{{item.note}}</p>{{/if}}{{#if item.reversed}}<small>Anulado</small>{{/if}}</div>
+                <b>{{item.amount_label}}<small>pontos</small></b>
               </article>
             {{else}}
               <div class="westan-points-empty">Seu histórico aparecerá aqui.</div>
             {{/each}}
           </div>
+          {{#if this.data.next_cursor}}<button class="westan-points-load-more" type="button" disabled={{this.historyBusy}} {{on "click" this.loadMoreHistory}}>{{if this.historyBusy "Carregando…" "Ver mais movimentações"}}</button>{{/if}}
         </section>
       {{/if}}
 

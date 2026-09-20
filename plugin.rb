@@ -3,7 +3,7 @@
 # name: discourse-westan-pontos
 # about: Carteira de pontos e catálogo de benefícios para a comunidade Westan
 # meta_topic_id: 0
-# version: 0.4.0
+# version: 0.5.0
 # authors: Westan
 # url: https://github.com/forumwestan/discourse-westan-pontos
 # required_version: 3.2.0
@@ -20,6 +20,9 @@ register_svg_icon "check"
 register_svg_icon "xmark"
 register_svg_icon "plus"
 register_svg_icon "coins"
+register_svg_icon "arrow-up"
+register_svg_icon "arrow-down"
+register_svg_icon "paper-plane"
 
 module ::WestanPoints
   PLUGIN_NAME = "discourse-westan-pontos"
@@ -34,6 +37,7 @@ after_initialize do
   require_relative "app/models/westan_points/redemption"
   require_relative "app/models/westan_points/vip_grant"
   require_relative "app/services/westan_points/ledger"
+  require_relative "app/services/westan_points/transfer_service"
   require_relative "app/services/westan_points/vip_access_service"
   require_relative "app/services/westan_points/redemption_service"
   require_relative "app/jobs/scheduled/westan_points_expire_points"
@@ -43,6 +47,8 @@ after_initialize do
 
   WestanPoints::Engine.routes.draw do
     get "/" => "points#index"
+    get "/transactions" => "points#transactions"
+    post "/transfer" => "points#transfer"
     post "/redeem" => "points#redeem"
     post "/admin/rewards" => "points#create_reward"
     patch "/admin/rewards/:id" => "points#update_reward"
@@ -52,6 +58,8 @@ after_initialize do
 
   Discourse::Application.routes.prepend do
     get "/westan/pontos" => "westan_points/points#index"
+    get "/westan/pontos/transactions" => "westan_points/points#transactions"
+    post "/westan/pontos/transfer" => "westan_points/points#transfer"
     post "/westan/pontos/redeem" => "westan_points/points#redeem"
     post "/westan/pontos/admin/rewards" => "westan_points/points#create_reward"
     patch "/westan/pontos/admin/rewards/:id" => "westan_points/points#update_reward"

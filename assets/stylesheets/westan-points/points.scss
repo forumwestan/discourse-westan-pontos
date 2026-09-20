@@ -7,23 +7,88 @@
   --wp-border: color-mix(in srgb, var(--primary, #17131d) 13%, transparent);
   --wp-text: var(--primary, #17131d);
   --wp-muted: color-mix(in srgb, var(--primary, #17131d) 60%, transparent);
-  width: min(100% - 24px, 980px);
+  --wp-mint: #00e99a;
+  width: min(100% - 24px, 820px);
   margin: 0 auto;
   padding: 28px 0 64px;
   color: var(--wp-text);
 }
 
-.westan-points-hero {
-  position: relative;
-  overflow: hidden;
+.westan-points-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  h1 { overflow-wrap: anywhere; }
+}
+
+.westan-points-avatar {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.westan-points-shell {
+  button { cursor: pointer; }
+  button:disabled { cursor: wait; opacity: 0.6; }
+  :focus-visible { outline: 2px solid var(--wp-accent); outline-offset: 3px; }
+}
+
+.westan-points-transfer {
   padding: 24px;
   border: 1px solid var(--wp-border);
   border-radius: 28px;
-  background:
-    radial-gradient(circle at 88% 12%, rgba(216, 42, 203, 0.28), transparent 30%),
-    linear-gradient(145deg, #1a0c22, #0d0911 68%);
-  box-shadow: 0 18px 45px rgba(43, 12, 62, 0.18);
-  color: #fff;
+  background: var(--wp-surface);
+  > p { color: var(--wp-muted); }
+  fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+  label { display: block; margin: 20px 0 8px; font-weight: 650; }
+  small { color: var(--wp-muted); }
+  input, textarea {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--wp-soft);
+    color: var(--wp-text);
+    border: 1px solid var(--wp-border);
+    border-radius: 14px;
+    padding: 14px;
+    font-size: 16px;
+  }
+  textarea { min-height: 90px; resize: vertical; }
+  &__notice { font-size: 0.82rem; color: var(--wp-muted); margin: 18px 0; }
+}
+
+.westan-points-submit, .westan-points-load-more {
+  border: 0;
+  border-radius: 14px;
+  padding: 14px 20px;
+  font-weight: 700;
+}
+.westan-points-submit { background: var(--wp-mint); color: #10271e; width: 100%; }
+.westan-points-load-more { background: var(--wp-soft); color: var(--wp-text); display: block; margin: 16px auto; }
+.westan-points-feedback { padding: 14px; border: 1px solid var(--wp-border); border-radius: 14px; }
+.westan-points-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+  button {
+    border: 1px solid var(--wp-border);
+    border-radius: 999px;
+    padding: 8px 14px;
+    background: var(--wp-surface);
+    color: var(--wp-muted);
+    &[aria-pressed="true"] { background: var(--wp-text); color: var(--wp-surface); }
+  }
+}
+
+.westan-points-hero {
+  position: relative;
+  padding: 24px;
+  border-radius: 28px 28px 0 0;
+  background: var(--wp-soft);
+  color: var(--wp-text);
 }
 
 .westan-points-hero__topline,
@@ -48,7 +113,7 @@
   }
 
   p {
-    color: #dba8fa;
+    color: var(--wp-muted);
     font-size: 0.82rem;
     font-weight: 850;
     letter-spacing: 0;
@@ -72,46 +137,62 @@
     height: 38px;
     padding: 0;
     place-items: center;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid var(--wp-border);
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
+    background: var(--wp-surface);
+    color: var(--wp-text);
   }
 }
 
 .westan-points-balance {
-  width: fit-content;
-  min-width: 310px;
+  position: relative;
+  overflow: hidden;
+  min-height: 172px;
   margin-top: 28px;
-  padding: 17px 20px;
+  padding: 24px;
   gap: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(14px);
+  border: 0;
+  border-radius: 30px;
+  background: var(--wp-mint);
+  color: #10271e;
+
+  &::after {
+    content: "";
+    position: absolute;
+    width: 220px;
+    height: 220px;
+    right: -130px;
+    top: -120px;
+    border: 1px solid #10271e40;
+    border-radius: 45%;
+    box-shadow: 0 0 0 22px #10271e0d, 0 0 0 44px #10271e0d;
+    transform: rotate(30deg);
+    pointer-events: none;
+  }
 
   div {
     display: grid;
     grid-template-columns: auto auto;
     align-items: baseline;
     column-gap: 7px;
+    min-width: 0;
   }
 
   small {
     grid-column: 1 / -1;
-    color: rgba(255, 255, 255, 0.66);
-    font-size: 0.72rem;
-    font-weight: 800;
-    text-transform: uppercase;
+    color: #204d3c;
+    font-size: 0.85rem;
+    font-weight: 600;
   }
 
   strong {
-    font-size: 2.1rem;
+    font-size: clamp(2.5rem, 8vw, 4rem);
+    letter-spacing: -0.05em;
     line-height: 1;
   }
 
   span {
-    color: rgba(255, 255, 255, 0.72);
+    color: #204d3c;
     font-size: 0.82rem;
   }
 
@@ -125,6 +206,11 @@
     font-style: normal;
     font-weight: 950;
   }
+
+  &.is-large-number {
+    flex-wrap: wrap;
+    strong { font-size: clamp(1.35rem, 5vw, 2.4rem); }
+  }
 }
 
 .westan-points-balance__icon {
@@ -134,8 +220,8 @@
   flex: 0 0 auto;
   place-items: center;
   border-radius: 14px;
-  background: linear-gradient(135deg, var(--wp-accent-2), var(--wp-accent));
-  color: #fff !important;
+  background: #10271e12;
+  color: #10271e !important;
 
   .d-icon,
   .westan-points-wallet-icon {
@@ -171,20 +257,20 @@
   padding: 8px 11px;
   align-items: center;
   gap: 8px;
-  border: 1px solid rgba(249, 217, 83, 0.22);
+  border: 1px solid var(--wp-border);
   border-radius: 12px;
   background: rgba(249, 217, 83, 0.09);
-  color: rgba(255, 255, 255, 0.76);
+  color: var(--wp-muted);
   font-size: 0.76rem;
 
   .d-icon {
     width: 13px;
     height: 13px;
-    color: #f9d953;
+    color: var(--wp-text);
   }
 
   b {
-    color: #fff;
+    color: var(--wp-text);
   }
 }
 
@@ -237,11 +323,11 @@
 
 .westan-points-tabs {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  margin: 20px 0;
-  padding: 5px;
-  border: 1px solid var(--wp-border);
-  border-radius: 18px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0 0 24px;
+  padding: 0 20px 24px;
+  border: 0;
+  border-radius: 0 0 32px 32px;
   background: var(--wp-soft);
 
   button {
@@ -252,10 +338,21 @@
     color: var(--wp-muted);
     font-weight: 850;
 
-    &.is-active {
+    span {
+      display: grid;
+      place-items: center;
+      width: 50px;
+      height: 50px;
+      margin: 0 auto 10px;
+      border: 1px solid var(--wp-border);
+      border-radius: 50%;
       background: var(--wp-surface);
-      box-shadow: 0 4px 15px rgba(31, 20, 38, 0.1);
+      font-size: 1.15rem;
+    }
+
+    &.is-active {
       color: var(--wp-text);
+      span { background: var(--wp-mint); color: #10271e; border-color: transparent; }
     }
   }
 }
@@ -430,7 +527,13 @@
 
   > b {
     margin-left: auto;
+    text-align: right;
+    white-space: nowrap;
+    small { display: block; font-weight: normal; }
   }
+
+  p { margin: 4px 0 0; font-size: 0.82rem; color: var(--wp-muted); overflow-wrap: anywhere; }
+  strong { overflow-wrap: anywhere; }
 
   &.is-positive > b {
     color: #1d9c5a;
@@ -594,7 +697,7 @@
 
   .westan-points-hero {
     padding: 20px 16px;
-    border-radius: 22px;
+    border-radius: 22px 22px 0 0;
   }
 
   .westan-points-hero__topline h1 {
