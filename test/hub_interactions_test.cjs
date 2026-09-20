@@ -28,6 +28,22 @@ function hub() {
 }
 
 (async () => {
+  let limited = hub();
+  limited.data = { ...limited.data, wallet: { balance: 500 }, transfer_allowance: { limit: 200, sent: 190, remaining: 10 } };
+  limited.submitTransfer(event);
+  assert.equal(limited.transferStep, 'form');
+  assert.match(limited.transferMessage, /10 pontos/);
+  assert.equal(limited.maxTransferAmount, 10);
+  limited.transferDraft.amount = '10';
+  limited.submitTransfer(event);
+  assert.equal(limited.transferStep, 'review');
+  transport = url => { if (url.endsWith('/transfer')) return { wallet: { balance: 490 }, transfer_allowance: { limit: 200, sent: 200, remaining: 0 } }; throw new Error('history offline'); };
+  await limited.confirmTransfer();
+  assert.equal(limited.transferStep, 'success');
+  assert.equal(limited.transferAllowance.remaining, 0, 'receipt updates allowance even if refresh fails');
+  limited.newTransfer();
+  assert.equal(limited.maxTransferAmount, 0);
+
   let instance = hub();
   instance.submitTransfer(event);
   assert.equal(instance.transferStep, 'review');

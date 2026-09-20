@@ -4,6 +4,8 @@ Plugin independente para Discourse com carteira de pontos, multiplicador VIP, ca
 
 ## Transferências e extrato (0.5.0)
 
+Desde a versão 0.7.0, os envios somados por mês-calendário são limitados a **200 pontos** para membros comuns/VIP e **400 pontos** para Premium, identificado pelo grupo `westan_points_eligible_vip_group` (padrão `vip_elegivel`). O limite renova no dia 1 usando `Time.zone` do servidor. Transferências já realizadas no mês contam; recebimentos, resgates e ajustes administrativos não contam. Mudanças de grupo recalculam o teto sem zerar o consumo. O servidor confere o limite com a carteira bloqueada, e tentativas repetidas da mesma solicitação não debitam nem consomem o limite novamente. Não há migração ou reinicialização de saldos.
+
 A aba **Transferir** permite enviar uma quantidade inteira de pontos para um `@username`, com descrição opcional de até 200 caracteres. O usuário confirma o destinatário e o valor antes do envio. O saldo é debitado e creditado na mesma transação de banco, com bloqueio das duas carteiras em ordem consistente e identificação única da solicitação para evitar duplicação nas tentativas repetidas.
 
 Transferências não recebem o multiplicador VIP, não aumentam o total de pontos conquistados e preservam a validade original de cada parcela enviada. Os pontos que vencem primeiro são utilizados primeiro. O extrato registra os dois lados da operação, além de publicações, ajustes administrativos, trocas, estornos e expirações; permite filtrar e carregar registros anteriores em páginas de 30 itens.

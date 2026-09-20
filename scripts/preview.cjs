@@ -34,7 +34,7 @@ const params = new URLSearchParams(location.search);
 document.documentElement.dataset.theme = params.get('theme') || 'light';
 const configMode = params.get('config') === '1';
 const avatar = name => 'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"><rect width="96" height="96" rx="48" fill="#dec5ee"/><text x="48" y="62" text-anchor="middle" fill="#301a40" font-family="sans-serif" font-size="34">'+name+'</text></svg>');
-const state = { can_manage:true, is_multiplier_eligible:true, wallet:{balance:998,lifetime_earned:2012,next_expiration:{amount:194,expires_at:'2026-10-01T03:00:00Z'}},rules:{points_per_post:1,points_per_topic:2,vip_multiplier:2},
+const state = { can_manage:true, is_multiplier_eligible:true, transfer_allowance:{limit:400,sent:20,remaining:380,resets_at:'2026-10-01T03:00:00Z'}, wallet:{balance:998,lifetime_earned:2012,next_expiration:{amount:194,expires_at:'2026-10-01T03:00:00Z'}},rules:{points_per_post:1,points_per_topic:2,vip_multiplier:2},
  transactions:[{id:1,description:'Recebido de @Andreza',amount:120,origin:'member',counterparty_username:'Andreza',note:'Obrigada pela ajuda!',created_at:'2026-09-19T15:30:00Z'},{id:2,description:'Post publicado',amount:2,origin:'system',created_at:'2026-09-19T14:18:00Z'}],
  rewards:[{id:1,title:'7 dias de VIP',description:'VIP por uma semana.',cost:300,stock:null,can_redeem:true,enabled:true,reward_type:'vip_group_access',duration_days:7,automatic_fulfillment:true}],redemptions:[],admin:{rewards:[],redemptions:[]} };
 state.admin.rewards = state.rewards.map(x=>({...x}));
@@ -52,12 +52,15 @@ async function ajax(url, options={}) {
    const data=options.data;
    if (!completed.has(data.request_id)) {
      if(data.amount>state.wallet.balance) throw {jqXHR:{status:422,responseJSON:{errors:['Saldo insuficiente.']}}};
+     if(data.amount>state.transfer_allowance.remaining) throw {jqXHR:{status:422,responseJSON:{errors:['Limite mensal de transferências atingido.'],transfer_allowance:clone(state.transfer_allowance)}}};
      state.wallet.balance-=data.amount;
+     state.transfer_allowance.sent+=data.amount;
+     state.transfer_allowance.remaining-=data.amount;
      state.transactions.unshift({id:Date.now(),description:'Enviado para @'+data.username,amount:-data.amount,origin:'member',counterparty_username:data.username,note:data.description,created_at:new Date().toISOString()});
      completed.set(data.request_id,clone(state.transactions[0]));
    }
    if(failure){failure=false;throw {jqXHR:{status:0}};}
-   return {wallet:clone(state.wallet),transaction:clone(completed.get(data.request_id))};
+   return {wallet:clone(state.wallet),transaction:clone(completed.get(data.request_id)),transfer_allowance:clone(state.transfer_allowance)};
  }
  if(url.includes('/admin/rewards')) {
    const reward={...options.data,cost:Number(options.data.cost),id:options.type==='PATCH'?Number(url.split('/').at(-1)):Date.now()};

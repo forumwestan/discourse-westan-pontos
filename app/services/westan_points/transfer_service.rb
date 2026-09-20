@@ -4,6 +4,15 @@ module WestanPoints
   class TransferService
     class InvalidTransfer < StandardError; end
 
+    def self.monthly_allowance(user:, now: Time.zone.now)
+      starts_at = now.in_time_zone.beginning_of_month
+      resets_at = starts_at.advance(months: 1)
+      limit = Ledger.multiplier_eligible?(user) ? 400 : 200
+      sent = -Transaction.where(user_id: user.id, kind: "transfer_out", created_at: starts_at...resets_at)
+        .where("amount < 0").sum(:amount)
+      { limit: limit, sent: sent, remaining: [limit - sent, 0].max, resets_at: resets_at }
+    end
+
     def self.transfer!(sender:, username:, amount:, description:, request_id:)
       value_string = amount.to_s
       unless value_string.match?(/\A[1-9]\d{0,9}\z/) && value_string.to_i <= 2_147_483_647
@@ -38,6 +47,12 @@ module WestanPoints
         end
 
         now = Time.zone.now
+        # The sender's wallet is locked: concurrent requests cannot spend the same
+        # monthly allowance. Idempotent retries return above without counting twice.
+        allowance = monthly_allowance(user: sender, now: now)
+        if amount > allowance[:remaining]
+          raise InvalidTransfer, "Limite mensal de #{allowance[:limit]} pontos para transferências. Você já enviou #{allowance[:sent]} e ainda pode enviar #{allowance[:remaining]} pontos neste mês."
+        end
         Ledger.expire_due_points!(user: sender, now: now)
         Ledger.expire_due_points!(user: recipient, now: now)
         from.reload
@@ -61,12 +76,14 @@ module WestanPoints
         outbound = Transaction.create!(
           wallet: from, user: sender, kind: "transfer_out", amount: -amount,
           balance_after: from.balance, event_key: event_key,
+          created_at: now,
           description: "Enviado para @#{recipient.username}",
           metadata: { counterparty_id: recipient.id, counterparty_username: recipient.username, note: note }
         )
         Transaction.create!(
           wallet: to, user: recipient, kind: "transfer_in", amount: amount,
           balance_after: to.balance, event_key: "#{event_key}:received",
+          created_at: now,
           description: "Recebido de @#{sender.username}",
           expires_at: parts.filter_map { |part| Time.iso8601(part["expires_at"]) if part["expires_at"] }.min,
           metadata: { counterparty_id: sender.id, counterparty_username: sender.username,

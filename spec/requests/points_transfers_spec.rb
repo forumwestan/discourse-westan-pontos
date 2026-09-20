@@ -66,8 +66,18 @@ RSpec.describe "Westan Points transfers" do
     }
     expect(response.status).to eq(200)
     expect(response.parsed_body["wallet"]["balance"]).to eq(80)
+    expect(response.parsed_body["transfer_allowance"]).to include("limit" => 200, "sent" => 20, "remaining" => 180)
     get "/westan/pontos/transactions.json", params: { filter: "transfers" }
     expect(response.parsed_body["transactions"].first["counterparty_username"]).to eq(recipient.username)
     expect(WestanPoints::Wallet.find_by(user: recipient).balance).to eq(20)
+  end
+
+  it "enforces the monthly limit regardless of fields forged by the client" do
+    WestanPoints::Ledger.adjust!(user: sender, amount: 1000, description: "Crédito", actor: sender)
+    sign_in(sender)
+    post "/westan/pontos/transfer.json", params: { username: recipient.username, amount: "201", request_id: SecureRandom.uuid, is_multiplier_eligible: true, transfer_allowance: { remaining: 9999 } }
+    expect(response.status).to eq(422)
+    expect(response.parsed_body["transfer_allowance"]).to include("limit" => 200, "sent" => 0, "remaining" => 200)
+    expect(WestanPoints::Wallet.find_by(user: sender).balance).to eq(1000)
   end
 end

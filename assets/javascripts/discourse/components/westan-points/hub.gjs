@@ -68,6 +68,11 @@ export default class WestanPointsHub extends Component {
     return Boolean(this.data.is_multiplier_eligible);
   }
 
+  get transferAllowance() { return this.data.transfer_allowance; }
+  get maxTransferAmount() {
+    return Math.min(this.wallet.balance, this.transferAllowance?.remaining ?? this.wallet.balance);
+  }
+
   get nextExpiration() {
     return this.wallet.next_expiration;
   }
@@ -271,6 +276,10 @@ export default class WestanPointsHub extends Component {
       this.transferMessage = "Informe um valor inteiro, maior que zero e dentro do seu saldo.";
       return;
     }
+    if (this.transferAllowance && amount > this.transferAllowance.remaining) {
+      this.transferMessage = `Você ainda pode enviar ${this.transferAllowance.remaining} pontos neste mês (limite de ${this.transferAllowance.limit}).`;
+      return;
+    }
     this.reviewedTransfer = {
       username: recipient.username, amount, description: this.transferDraft.description.trim(),
       name: recipient.name, avatar: recipient.avatar,
@@ -299,7 +308,7 @@ export default class WestanPointsHub extends Component {
         type: "POST", data: { username, amount, description, request_id: this.transferRequestId },
       });
       if (this.isDestroying || this.isDestroyed) { return; }
-      this.data = { ...this.data, wallet: result.wallet };
+      this.data = { ...this.data, wallet: result.wallet, transfer_allowance: result.transfer_allowance || this.transferAllowance };
       this.transferReceipt = result.transaction || null;
       this.transferStep = "success";
       this.transferUncertain = false;
@@ -309,6 +318,8 @@ export default class WestanPointsHub extends Component {
       catch { this.transferRefreshWarning = "Transferência concluída. O extrato será atualizado quando você recarregar a página."; }
     } catch (error) {
       if (this.isDestroying || this.isDestroyed) { return; }
+      const allowance = error?.jqXHR?.responseJSON?.transfer_allowance;
+      if (allowance) { this.data = { ...this.data, transfer_allowance: allowance }; }
       const status = error?.jqXHR?.status ?? error?.status;
       this.transferUncertain = !status || status >= 500;
       this.transferStep = "error";
@@ -726,6 +737,7 @@ export default class WestanPointsHub extends Component {
           <p>Nas trocas, usamos primeiro os pontos do ciclo que vence antes. Assim, somente o saldo não utilizado de cada trimestre expira.</p>
           <p>Benefícios automáticos, como dias de VIP, são ativados na hora. Os demais ficam pendentes até a confirmação da equipe.</p>
           <p>Você também pode transferir pontos para outro membro. As transferências mantêm a validade original dos pontos e não recebem multiplicador VIP.</p>
+          <p>Limite mensal de envio: 200 pontos para membros comuns e VIP; 400 pontos para Premium. O limite é renovado no dia 1, no fuso do servidor. Receber pontos não consome esse limite.</p>
         </dialog>
       {{/if}}
 
@@ -761,8 +773,9 @@ export default class WestanPointsHub extends Component {
               </div>
               {{#if this.selectedRecipient}}<small class="westan-points-recipient-selected">{{dIcon "check"}} Destinatário: @{{this.selectedRecipient.username}}</small>{{/if}}
               <label for="wp-amount">Quantidade de pontos</label>
-              <input id="wp-amount" required type="number" min="1" step="1" max={{this.wallet.balance}} inputmode="numeric" placeholder="0" data-field="amount" value={{this.transferDraft.amount}} {{on "input" this.updateTransfer}} />
+              <input id="wp-amount" required type="number" min="1" step="1" max={{this.maxTransferAmount}} inputmode="numeric" placeholder="0" data-field="amount" value={{this.transferDraft.amount}} {{on "input" this.updateTransfer}} />
               <small>Disponível: {{this.formattedBalance}} pontos</small>
+              {{#if this.transferAllowance}}<p class="westan-points-transfer__notice" role="status">Limite mensal: <strong>{{this.transferAllowance.limit}} pontos</strong> · Enviados: {{this.transferAllowance.sent}} · Restam: <strong>{{this.transferAllowance.remaining}} pontos</strong>. Renovação no dia 1.</p>{{/if}}
               <label for="wp-description">Descrição <small>(opcional)</small></label>
               <textarea id="wp-description" maxlength="200" placeholder="Deixe uma mensagem…" data-field="description" value={{this.transferDraft.description}} {{on "input" this.updateTransfer}}></textarea>
               <p class="westan-points-transfer__notice">Os pontos enviados mantêm a data de expiração original.</p>

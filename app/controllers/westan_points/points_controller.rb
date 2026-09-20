@@ -24,6 +24,7 @@ module WestanPoints
       render json: {
         wallet: wallet_payload(wallet),
         is_multiplier_eligible: Ledger.multiplier_eligible?(current_user),
+        transfer_allowance: TransferService.monthly_allowance(user: current_user),
         rules: rules_payload,
         rewards: rewards.map { |reward| reward_payload(reward, wallet) },
         **history_payload,
@@ -47,9 +48,10 @@ module WestanPoints
         description: params[:description], request_id: params[:request_id]
       )
       render json: { success: true, transaction: transaction_payload(transaction),
+                     transfer_allowance: TransferService.monthly_allowance(user: current_user),
                      wallet: wallet_payload(Wallet.find_by!(user_id: current_user.id)) }
     rescue TransferService::InvalidTransfer => error
-      render json: { errors: [error.message] }, status: :unprocessable_entity
+      render json: { errors: [error.message], transfer_allowance: TransferService.monthly_allowance(user: current_user) }, status: :unprocessable_entity
     end
 
     def redeem
